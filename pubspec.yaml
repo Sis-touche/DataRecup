@@ -1,0 +1,54 @@
+name: recupdata
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Pour gérer la base SQLite et les chemins de fichiers
+  sqflite: ^2.3.0
+  path: ^1.9.0
+
+  # Outils UI et Navigation
+  cupertino_icons: ^1.0.8
+  go_router: ^14.0.0
+  provider: ^6.1.5+1
+  intl: ^0.19.0
+  shared_preferences: ^2.3.0
+
+  # Gestion des fichiers et partage de données (Excel/PDF)
+  excel: ^4.0.0
+  share_plus: ^10.0.0
+  permission_handler: ^11.0.0
+  path_provider: ^2.1.0
+  file_picker: ^8.0.0
+  device_info_plus: ^9.1.0
+
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+  # AJOUT : Package pour la génération automatique d'icônes
+  flutter_launcher_icons: ^0.13.1
+
+# CONFIGURATION DE L'ICÔNE DE L'APPLICATION
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/logo.png"
+
+flutter:
+  uses-material-design: true
+
+  # AJOUT : Déclaration du dossier d'assets pour inclure l'icône source
+  assets:
+    - assets/
