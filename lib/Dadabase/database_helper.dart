@@ -385,9 +385,10 @@ class DatabaseHelper {
       return await _exportAndroid(Uint8List.fromList(bytes), nomFichier);
     } else if (Platform.isIOS) {
       return await _exportIOS(Uint8List.fromList(bytes), nomFichier);
-    } else {
-      return await _exportDesktop(Uint8List.fromList(bytes), nomFichier);
-    }
+    } 
+    // else {
+    //   return await _exportDesktop(Uint8List.fromList(bytes), nomFichier);
+    // }
   }
 
 // ── Android : stratégie selon version SDK ──────────────────────────────────
@@ -430,21 +431,19 @@ class DatabaseHelper {
   }
 
 // ── Desktop ────────────────────────────────────────────────────────────────
-  Future<File?> _exportDesktop(Uint8List bytes, String nomFichier) async {
-    String? path = await FilePicker.platform.saveFile(
-      dialogTitle: 'Enregistrer le fichier Excel',
-      fileName: nomFichier,
-      type: FileType.custom,
-      allowedExtensions: ['xlsx'],
-    );
+  // Future<File?> _exportDesktop(Uint8List bytes, String nomFichier) async {
+  //   String? path = await FilePicker.platform.saveFile(
+  //     dialogTitle: 'Enregistrer le fichier Excel',
+  //     fileName: nomFichier,
+  //     type: FileType.custom,
+  //     allowedExtensions: ['xlsx'],
+  //   );
+  //   if (!path.endsWith('.xlsx')) path = '$path.xlsx';
 
-    if (path == null) return null;
-    if (!path.endsWith('.xlsx')) path = '$path.xlsx';
-
-    final file = File(path);
-    await file.writeAsBytes(bytes);
-    return file;
-  }
+  //   final file = File(path);
+  //   await file.writeAsBytes(bytes);
+  //   return file;
+  // }
 
 // ── Écriture dans /Downloads (Android 6-9) ─────────────────────────────────
   Future<File?> _ecrireDansDownloads(Uint8List bytes, String nomFichier) async {

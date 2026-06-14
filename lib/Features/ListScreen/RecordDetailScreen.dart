@@ -5,7 +5,7 @@ import 'package:recupdata/Features/ListScreen/DeleteConfirmationScreen.dart';
 class RecordDetailScreen extends StatelessWidget {
   final int ficheId;
 
-  const RecordDetailScreen({Key? key, required this.ficheId}) : super(key: key);
+  const RecordDetailScreen({super.key, required this.ficheId});
 
   Future<Map<String, dynamic>?> _loadFiche() =>
       DatabaseHelper.instance.obtenirFicheParId(ficheId);

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:recupdata/Root/Root_name.dart'; // pour RouteNames
+import 'package:recupdata/Root/root_name.dart'; // pour RouteNames
 
 class LaunchScreen extends StatefulWidget {
   const LaunchScreen({super.key});

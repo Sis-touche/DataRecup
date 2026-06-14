@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:recupdata/Features/Dashboard/Dashboardscreen.dart';
 import 'package:recupdata/Features/Form/fromrecup.dart';
 import 'package:recupdata/Features/Launch/launchScreen.dart';
-import 'package:recupdata/Root/Root_name.dart';
+import 'package:recupdata/Root/root_name.dart';
 
 class AppRouter {
   late final GoRouter router;

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:recupdata/Root/app_root.dart';
-import 'package:recupdata/Root/app_router.dart'; // attention : importe le bon fichier
+// attention : importe le bon fichier
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

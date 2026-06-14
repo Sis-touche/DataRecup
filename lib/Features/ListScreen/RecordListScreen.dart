@@ -6,7 +6,7 @@ import 'package:recupdata/Dadabase/database_helper.dart';
 import 'package:recupdata/Features/Form/fromrecup.dart';
 import 'package:recupdata/Features/ListScreen/RecordDetailScreen.dart' hide DBConstantes, DatabaseHelper, exporterEtEventuellementVider;
 class RecordListScreen extends StatefulWidget {
-  const RecordListScreen({Key? key}) : super(key: key);
+  const RecordListScreen({super.key});
 
   @override
   State<RecordListScreen> createState() => _RecordListScreenState();
@@ -14,7 +14,7 @@ class RecordListScreen extends StatefulWidget {
 
 class _RecordListScreenState extends State<RecordListScreen> {
   late Future<List<Map<String, dynamic>>> _recordsFuture;
-  int _currentIndex = 1;
+  final int _currentIndex = 1;
   final TextEditingController _searchController = TextEditingController();
   List<Map<String, dynamic>> _allFiches = [];
   List<Map<String, dynamic>> _filteredFiches = [];
@@ -382,10 +382,21 @@ class _FicheCard extends StatelessWidget {
               ),
               Row(
                 children: [
-                  Expanded(child: _InfoCell(label: 'ÂGE', value: '$age ans')),
-                  const SizedBox(width: 8),
-                  Expanded(child: _InfoCell(label: 'SEXE', value: sexe)),
-                  const SizedBox(width: 8),
+                Expanded(
+  child: _InfoCell(
+    label: 'ÂGE', 
+    value: '$age ans',
+    valueColor: Colors.black, // <-- Ajoute la couleur de ton choix ici
+  ),
+),
+const SizedBox(width: 8),
+Expanded(
+  child: _InfoCell(
+    label: 'SEXE', 
+    value: sexe,
+    valueColor: Colors.blue, // <-- Ou une autre couleur ici
+  ),
+),const SizedBox(width: 8),
                   // Nettoyage des SizedBox inutiles pour garder une structure propre
                   const Row(
                     children: [
@@ -418,7 +429,7 @@ class _InfoCell extends StatelessWidget {
   const _InfoCell({
     required this.label,
     required this.value,
-    this.valueColor = Colors.black87,
+    required this.valueColor,
   });
 
   @override

@@ -6,10 +6,10 @@ class DeleteConfirmationScreen extends StatelessWidget {
   final String ficheNumero;
 
   const DeleteConfirmationScreen({
-    Key? key,
+    super.key,
     required this.ficheId,
     required this.ficheNumero,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

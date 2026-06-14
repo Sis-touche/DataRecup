@@ -4,14 +4,14 @@ import 'package:recupdata/Dadabase/database_helper.dart';
 import 'package:recupdata/Features/ListScreen/RecordListScreen.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({Key? key}) : super(key: key);
+  const DashboardScreen({super.key});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  int _currentIndex = 0;
+  final int _currentIndex = 0;
 
   // Données BDD
   int _totalFiches = 0;

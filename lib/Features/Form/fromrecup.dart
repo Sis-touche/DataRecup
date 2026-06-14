@@ -53,7 +53,7 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> with TickerProvider
     "fiche_no": "", // Sera fusionné définitivement après le popup
     "age": null,
     "sexe": null,
-    "matrimonial": null,
+    "matrimonial": null,  
     "niveau_etude": null,
     "lieu_residence": null,
     "religion": null,
@@ -459,90 +459,92 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> with TickerProvider
     );
   }
 
-  Future<void> _exporterFichesVersExcel() async {
-    setState(() => _isSaving = true);
-    try {
-      final List<Map<String, dynamic>> fiches = await DatabaseHelper.instance.obtenirToutesLesFiches();
+Future<void> _exporterFichesVersExcel() async {
+  setState(() => _isSaving = true);
+  try {
+    final List<Map<String, dynamic>> fiches = await DatabaseHelper.instance.obtenirToutesLesFiches();
 
-      if (fiches.isEmpty) {
-        if (!mounted) return;
-        _showErrorDialog("Aucune fiche enregistrée à exporter.");
-        return;
-      }
-
-      // 1. Construction du fichier Excel en mémoire
-      var excel = Excel.createExcel();
-      Sheet feuille = excel['Enquetes_VIH'];
-      excel.delete('Sheet1');
-
-      List<String> entetes = [
-        "Numéro Fiche", "Date Saisie", "Tranche d'âge", "Sexe",
-        "Statut Matrimonial", "Niveau d'étude", "Résidence", "Statut Final"
-      ];
-      feuille.appendRow(entetes.map((e) => TextCellValue(e)).toList());
-
-      for (var fiche in fiches) {
-        feuille.appendRow([
-          TextCellValue(fiche[DBConstantes.colFicheNumero]?.toString() ?? ''),
-          TextCellValue(fiche[DBConstantes.colDateSaisie]?.toString() ?? ''),
-          TextCellValue(fiche[DBConstantes.colAgeTranche]?.toString() ?? ''),
-          TextCellValue(fiche[DBConstantes.colSexe]?.toString() ?? ''),
-          TextCellValue(fiche[DBConstantes.colStatutMatrimonial]?.toString() ?? ''),
-          TextCellValue(fiche[DBConstantes.colNiveauEtude]?.toString() ?? ''),
-          TextCellValue(fiche[DBConstantes.colResidence]?.toString() ?? ''),
-          TextCellValue(fiche[DBConstantes.colStatutSerologique]?.toString() ?? ''),
-        ]);
-      }
-
-      // 2. Encodage au format binaire (Bytes)
-      final List<int>? bytesExcel = excel.encode(); // Utilisation de .encode() au lieu de .save() 
-      if (bytesExcel == null) {
-        _showErrorDialog("Échec de l'encodage du fichier Excel.");
-        return;
-      }
-
-      final String dateStr = DateTime.now().toIso8601String().split('T')[0].replaceAll('-', '');
-      final String nomFichierDefaut = "export_enquetes_$dateStr.xlsx";
-
-      // 3. Appel de la boîte de dialogue en fournissant DIRECTEMENT les bytes
-      String? pathSelectionne = await FilePicker.platform.saveFile(
-        dialogTitle: 'Choisir l\'emplacement du fichier Excel',
-        fileName: nomFichierDefaut,
-        type: FileType.custom,
-        allowedExtensions: ['xlsx'],
-        bytes: Uint8List.fromList(bytesExcel), // Injection cruciale des octets pour Android/iOS 
-      );
-
-      if (pathSelectionne == null) {
-        if (mounted) setState(() => _isSaving = false);
-        return; // L'utilisateur a annulé
-      }
-
-      if (!pathSelectionne.endsWith('.xlsx')) {
-        pathSelectionne = '$pathSelectionne.xlsx';
-      }
-
-      // 4. Écriture finale de sécurité sur le stockage physique
-      final File fichierPhysique = File(pathSelectionne);
-      if (!await fichierPhysique.exists() || (await fichierPhysique.length()) == 0) {
-        await fichierPhysique.writeAsBytes(bytesExcel);
-      }
-
+    if (fiches.isEmpty) {
       if (!mounted) return;
-      _showCustomSuccessDialog(
-          titre: "Exportation réussie",
-          message: "Le fichier Excel a été enregistré sous :\n${fichierPhysique.path}"
-      );
-
-    } catch (e) {
-      debugPrint("❌ Erreur lors de l'exportation: $e");
-      if (!mounted) return;
-      _showErrorDialog("Échec de l'exportation.\nDétails: $e");
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
+      _showErrorDialog("Aucune fiche enregistrée à exporter.");
+      return;
     }
-  }
 
+    // 1. Construction du fichier Excel en mémoire
+    var excel = Excel.createExcel();
+    Sheet feuille = excel['Enquetes_VIH'];
+    excel.delete('Sheet1');
+
+    List<String> entetes = [
+      "Numéro Fiche", "Date Saisie", "Tranche d'âge", "Sexe",
+      "Statut Matrimonial", "Niveau d'étude", "Résidence", "Statut Final"
+    ];
+    feuille.appendRow(entetes.map((e) => TextCellValue(e)).toList());
+
+    for (var fiche in fiches) {
+      feuille.appendRow([
+        TextCellValue(fiche[DBConstantes.colFicheNumero]?.toString() ?? ''),
+        TextCellValue(fiche[DBConstantes.colDateSaisie]?.toString() ?? ''),
+        TextCellValue(fiche[DBConstantes.colAgeTranche]?.toString() ?? ''),
+        TextCellValue(fiche[DBConstantes.colSexe]?.toString() ?? ''),
+        TextCellValue(fiche[DBConstantes.colStatutMatrimonial]?.toString() ?? ''),
+        TextCellValue(fiche[DBConstantes.colNiveauEtude]?.toString() ?? ''),
+        TextCellValue(fiche[DBConstantes.colResidence]?.toString() ?? ''),
+        TextCellValue(fiche[DBConstantes.colStatutSerologique]?.toString() ?? ''),
+      ]);
+    }
+
+    // 2. Encodage au format binaire (Bytes)
+    final List<int>? bytesExcel = excel.encode(); 
+    if (bytesExcel == null) {
+      _showErrorDialog("Échec de l'encodage du fichier Excel.");
+      return;
+    }
+
+    final String dateStr = DateTime.now().toIso8601String().split('T')[0].replaceAll('-', '');
+    final String nomFichierDefaut = "export_enquetes_$dateStr.xlsx";
+
+    // 3. Appel de la boîte de dialogue
+    String? pathSelectionne = await FilePicker.platform.saveFile(
+      dialogTitle: 'Choisir l\'emplacement du fichier Excel',
+      fileName: nomFichierDefaut,
+      type: FileType.custom,
+      allowedExtensions: ['xlsx'],
+      bytes: Uint8List.fromList(bytesExcel), 
+    );
+
+    // FIX 1 : Si l'utilisateur a annulé l'enregistrement, on arrête proprement ici
+    if (pathSelectionne == null) {
+      if (mounted) setState(() => _isSaving = false);
+      return; 
+    }
+
+    // FIX 2 : Maintenant 'pathSelectionne' est garanti non-nul
+    if (!pathSelectionne.endsWith('.xlsx')) {
+      pathSelectionne = '$pathSelectionne.xlsx';
+    }
+
+    // 4. Écriture finale de sécurité sur le stockage physique
+    final File fichierPhysique = File(pathSelectionne);
+    
+    if (!await fichierPhysique.exists() || (await fichierPhysique.length()) == 0) {
+      await fichierPhysique.writeAsBytes(bytesExcel);
+    }
+
+    if (!mounted) return;
+    _showCustomSuccessDialog(
+        titre: "Exportation réussie",
+        message: "Le fichier Excel a été enregistré sous :\n${fichierPhysique.path}"
+    );
+
+  } catch (e) {
+    debugPrint("❌ Erreur lors de l'exportation: $e");
+    if (!mounted) return;
+    _showErrorDialog("Échec de l'exportation.\nDétails: $e");
+  } finally {
+    if (mounted) setState(() => _isSaving = false);
+  }
+}
   @override
   Widget build(BuildContext context) {
     final double screenW = MediaQuery.of(context).size.width;
