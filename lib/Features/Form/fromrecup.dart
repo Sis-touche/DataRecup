@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart'; // Requis pour l'emplacement Excel
 import 'package:excel/excel.dart' hide Border;             // Requis pour la structure Excel
+import 'package:uuid/uuid.dart';
 import '../../Dadabase/database_helper.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -88,32 +89,61 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> with TickerProvider
   @override
   void initState() {
     super.initState();
-    _baseFicheNo = "F-${DateTime.now().millisecondsSinceEpoch}";
+    // _baseFicheNo = "F-${DateTime.now().millisecondsSinceEpoch}";
 
-    _progressController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-    _pageController = AnimationController(
-      duration: const Duration(milliseconds: 350),
-      vsync: this,
-    );
-    _progressAnimation = Tween<double>(
-      begin: 1 / _totalSteps,
-      end: 1 / _totalSteps,
-    ).animate(CurvedAnimation(parent: _progressController, curve: Curves.easeInOut));
-    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _pageController, curve: Curves.easeOut),
-    );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0.04, 0),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _pageController, curve: Curves.easeOut));
-    _pageController.forward();
+    // _progressController = AnimationController(
+    //   duration: const Duration(milliseconds: 600),
+    //   vsync: this,
+    // );
+    // _pageController = AnimationController(
+    //   duration: const Duration(milliseconds: 350),
+    //   vsync: this,
+    // );
+    // _progressAnimation = Tween<double>(
+    //   begin: 1 / _totalSteps,
+    //   end: 1 / _totalSteps,
+    // ).animate(CurvedAnimation(parent: _progressController, curve: Curves.easeInOut));
+    // _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
+    //   CurvedAnimation(parent: _pageController, curve: Curves.easeOut),
+    // );
+    // _slideAnimation = Tween<Offset>(
+    //   begin: const Offset(0.04, 0),
+    //   end: Offset.zero,
+    // ).animate(CurvedAnimation(parent: _pageController, curve: Curves.easeOut));
+    // _pageController.forward();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showIdentityPopup();
-    });
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   _showIdentityPopup();
+    // });
+
+    // 1. Génération automatique et immédiate d'un UUID unique
+  final String uuidUnique = const Uuid().v4();
+
+  // 2. Attribution directe à la fiche
+  _surveyData["fiche_no"] = "F-$uuidUnique";
+
+  // 3. Initialisation des contrôleurs d'animations
+  _progressController = AnimationController(
+    duration: const Duration(milliseconds: 600),
+    vsync: this,
+  );
+  _pageController = AnimationController(
+    duration: const Duration(milliseconds: 350),
+    vsync: this,
+  );
+  _progressAnimation = Tween<double>(
+    begin: 1 / _totalSteps,
+    end: 1 / _totalSteps,
+  ).animate(CurvedAnimation(parent: _progressController, curve: Curves.easeInOut));
+  _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
+    CurvedAnimation(parent: _pageController, curve: Curves.easeOut),
+  );
+  _slideAnimation = Tween<Offset>(
+    begin: const Offset(0.04, 0),
+    end: Offset.zero,
+  ).animate(CurvedAnimation(parent: _pageController, curve: Curves.easeOut));
+  
+  _pageController.forward();
   }
 
   @override
