@@ -158,7 +158,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Expanded(
           child: GestureDetector(
             onTap: () {
-              context.go('/register');
+              context.go('/form/new');
               // TODO : navigation vers le formulaire de saisie
             },
             child: Container(

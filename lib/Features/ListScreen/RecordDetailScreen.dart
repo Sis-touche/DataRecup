@@ -1,14 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:recupdata/Dadabase/database_helper.dart';
+// import 'package:recupdata/Features/Form/fromrecup.dart';
 import 'package:recupdata/Features/ListScreen/DeleteConfirmationScreen.dart';
-
-class RecordDetailScreen extends StatelessWidget {
+import 'package:go_router/go_router.dart';
+class RecordDetailScreen extends StatefulWidget {
   final int ficheId;
 
   const RecordDetailScreen({super.key, required this.ficheId});
 
+  @override
+  State<RecordDetailScreen> createState() => _RecordDetailScreenState();
+}
+
+class _RecordDetailScreenState extends State<RecordDetailScreen> {
+  late Future<Map<String, dynamic>?> _ficheFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _ficheFuture = _loadFiche();
+  }
+
   Future<Map<String, dynamic>?> _loadFiche() =>
-      DatabaseHelper.instance.obtenirFicheParId(ficheId);
+      DatabaseHelper.instance.obtenirFicheParId(widget.ficheId);
+
+  void _refreshData() {
+    setState(() {
+      _ficheFuture = _loadFiche();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +40,6 @@ class RecordDetailScreen extends StatelessWidget {
         shadowColor: Colors.black12,
         surfaceTintColor: Colors.transparent,
         centerTitle: false,
-        // 1. On augmente la hauteur de l'appBar pour accueillir confortablement les 2 lignes
         toolbarHeight: 70,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
@@ -28,10 +47,10 @@ class RecordDetailScreen extends StatelessWidget {
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black87, size: 18),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(context, true), // Return true to signal a potential update
         ),
         title: FutureBuilder<Map<String, dynamic>?>(
-          future: _loadFiche(),
+          future: _ficheFuture,
           builder: (context, snapshot) {
             final num = snapshot.data?[DBConstantes.colFicheNumero] ?? '...';
 
@@ -42,7 +61,7 @@ class RecordDetailScreen extends StatelessWidget {
                 const Text(
                   'DÉTAIL DU DOSSIER',
                   style: TextStyle(
-                    color: Color(0xFF22D3EE), // Ton cyan moderne
+                    color: Color(0xFF22D3EE),
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.5,
@@ -51,13 +70,13 @@ class RecordDetailScreen extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   'Fiche N° $num',
-                  maxLines: 2, // 2. On autorise le retour à la ligne
-                  overflow: TextOverflow.visible, // Plus de blocage !
+                  maxLines: 2,
+                  overflow: TextOverflow.visible,
                   style: const TextStyle(
                     color: Colors.black87,
                     fontWeight: FontWeight.bold,
-                    fontSize: 12, // Légèrement plus petit pour que le bloc reste élégant
-                    height: 1.2, // Ajuste l'espacement entre les deux lignes si ça coupe
+                    fontSize: 12,
+                    height: 1.2,
                   ),
                 ),
               ],
@@ -66,7 +85,7 @@ class RecordDetailScreen extends StatelessWidget {
         ),
       ),
       body: FutureBuilder<Map<String, dynamic>?>(
-        future: _loadFiche(),
+        future: _ficheFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
@@ -87,11 +106,9 @@ class RecordDetailScreen extends StatelessWidget {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    // ── En-tête statut ──────────────────────────
                     _StatutHeader(data: data),
                     const SizedBox(height: 16),
 
-                    // ── I. Identité ─────────────────────────────
                     _SectionCard(
                       title: 'I. IDENTITÉ',
                       icon: Icons.person_outline,
@@ -110,7 +127,6 @@ class RecordDetailScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
 
-                    // ── II. Connaissances ───────────────────────
                     _SectionCard(
                       title: 'II. CONNAISSANCES SUR LE VIH',
                       icon: Icons.menu_book_outlined,
@@ -128,7 +144,6 @@ class RecordDetailScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
 
-                    // ── III. Pratiques ──────────────────────────
                     _SectionCard(
                       title: 'III. PRATIQUES',
                       icon: Icons.monitor_heart_outlined,
@@ -156,7 +171,6 @@ class RecordDetailScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
 
-                    // ── IV. Attitudes ───────────────────────────
                     _SectionCard(
                       title: 'IV. ATTITUDES',
                       icon: Icons.favorite_outline,
@@ -173,7 +187,6 @@ class RecordDetailScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
 
-                    // ── V. Statut sérologique ───────────────────
                     _SectionCard(
                       title: 'V. STATUT SÉROLOGIQUE',
                       icon: Icons.science_outlined,
@@ -188,11 +201,30 @@ class RecordDetailScreen extends StatelessWidget {
                 ),
               ),
 
-              // ── Barre d'actions bas ─────────────────────────
               _BottomActionBar(
-                context: context,
-                ficheId: ficheId,
-                data: data,
+  ficheId: widget.ficheId,
+  data: data,
+  onEdit: () async {
+    final result = await context.push<bool>(
+      '/form/edit/${widget.ficheId}',
+    );
+    if (result == true) {
+      _refreshData();
+    }
+  },
+                onDelete: () {
+                   Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DeleteConfirmationScreen(
+                        ficheId: widget.ficheId,
+                        ficheNumero: data[DBConstantes.colFicheNumero] ?? 'Inconnu',
+                      ),
+                    ),
+                  ).then((hasDeleted) {
+                    if (hasDeleted == true) Navigator.pop(context, true);
+                  });
+                },
               ),
             ],
           );
@@ -201,7 +233,6 @@ class RecordDetailScreen extends StatelessWidget {
     );
   }
 
-  /// Convertit 0/1 en "Non"/"Oui" pour l'affichage
   String _intToOuiNon(dynamic value) {
     if (value == null) return '—';
     if (value is int) return value == 1 ? 'Oui' : 'Non';
@@ -209,7 +240,8 @@ class RecordDetailScreen extends StatelessWidget {
   }
 }
 
-// ── Statut Header ─────────────────────────────────────────────────────────────
+// ... (rest of the widgets are the same)
+
 class _StatutHeader extends StatelessWidget {
   final Map<String, dynamic> data;
   const _StatutHeader({required this.data});
@@ -228,7 +260,6 @@ class _StatutHeader extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. L'Expanded force la colonne à utiliser uniquement l'espace disponible restant
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -245,20 +276,18 @@ class _StatutHeader extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     data[DBConstantes.colFicheNumero] ?? '—',
-                    // 2. On autorise le texte à s'étaler sur plusieurs lignes si nécessaire
                     maxLines: 3,
                     overflow: TextOverflow.visible,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 20, // Légèrement réduit à 20 pour un rendu plus équilibré sur 2 lignes
+                      fontSize: 20,
                       color: Colors.black87,
-                      height: 1.2, // Ajuste l'espacement vertical entre les lignes
+                      height: 1.2,
                     ),
                   ),
                 ],
               ),
             ),
-            // 3. Un petit espace de sécurité pour que le texte ne colle pas au badge
             const SizedBox(width: 16),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -325,7 +354,6 @@ class _StatutHeader extends StatelessWidget {
   }
 }
 
-// ── Section Card ──────────────────────────────────────────────────────────────
 class _SectionCard extends StatelessWidget {
   final String title;
   final IconData icon;
@@ -382,7 +410,6 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-// ── Data Row ──────────────────────────────────────────────────────────────────
 class _DataRow extends StatelessWidget {
   final String label;
   final String? value;
@@ -391,7 +418,6 @@ class _DataRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // N'affiche pas la ligne si la valeur est nulle ou vide
     final display = (value == null || value!.trim().isEmpty) ? null : value!.trim();
     if (display == null) return const SizedBox.shrink();
 
@@ -427,16 +453,17 @@ class _DataRow extends StatelessWidget {
   }
 }
 
-// ── Barre d'actions bas ───────────────────────────────────────────────────────
 class _BottomActionBar extends StatelessWidget {
-  final BuildContext context;
   final int ficheId;
   final Map<String, dynamic> data;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   const _BottomActionBar({
-    required this.context,
     required this.ficheId,
     required this.data,
+    required this.onEdit,
+    required this.onDelete,
   });
 
   @override
@@ -463,7 +490,7 @@ class _BottomActionBar extends StatelessWidget {
                 'Éditer',
                 style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
               ),
-              onPressed: () {},
+              onPressed: onEdit,
             ),
           ),
           const SizedBox(width: 12),
@@ -480,19 +507,7 @@ class _BottomActionBar extends StatelessWidget {
                 'Supprimer',
                 style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => DeleteConfirmationScreen(
-                      ficheId: ficheId,
-                      ficheNumero: data[DBConstantes.colFicheNumero] ?? 'Inconnu',
-                    ),
-                  ),
-                ).then((hasDeleted) {
-                  if (hasDeleted == true) Navigator.pop(context, true);
-                });
-              },
+              onPressed: onDelete,
             ),
           ),
         ],

@@ -1,7 +1,5 @@
-import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:recupdata/Dadabase/database_helper.dart';
 import 'package:recupdata/Features/Form/fromrecup.dart';
 import 'package:recupdata/Features/ListScreen/RecordDetailScreen.dart' hide DBConstantes, DatabaseHelper, exporterEtEventuellementVider;

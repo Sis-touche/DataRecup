@@ -385,7 +385,8 @@ class DatabaseHelper {
       return await _exportAndroid(Uint8List.fromList(bytes), nomFichier);
     } else if (Platform.isIOS) {
       return await _exportIOS(Uint8List.fromList(bytes), nomFichier);
-    } 
+    }
+    return null; 
     // else {
     //   return await _exportDesktop(Uint8List.fromList(bytes), nomFichier);
     // }

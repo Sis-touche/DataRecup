@@ -23,232 +23,256 @@ class AppColors {
 }
 
 // ────────────────────────────────────────────────────────────────────
-//  ÉCRAN PRINCIPAL DU FORMULAIRE AVEC LAYOUT COLONNES
+//  ÉCRAN PRINCIPAL DU FORMULAIRE
 // ────────────────────────────────────────────────────────────────────
 class SurveyFormScreen extends StatefulWidget {
-  const SurveyFormScreen({super.key});
+  final int? ficheId;
+  const SurveyFormScreen({super.key, this.ficheId});
 
   @override
   State<SurveyFormScreen> createState() => _SurveyFormScreenState();
 }
 
-class _SurveyFormScreenState extends State<SurveyFormScreen> with TickerProviderStateMixin {
+class _SurveyFormScreenState extends State<SurveyFormScreen> {
+  bool get _isEditMode => widget.ficheId != null;
+  bool _isLoading = true;
   bool _isSaving = false;
+
+  // State-managed controllers for all text fields
+  final _sexeAutreController = TextEditingController();
+  final _statutMatrimonialAutreController = TextEditingController();
+  final _residenceAutreController = TextEditingController();
+  final _religionAutreController = TextEditingController();
+  final _sourceRevenuAutreController = TextEditingController();
+  final _agePremierRapportController = TextEditingController();
+  final _obstaclesAutreController = TextEditingController();
 
   final Map<String, dynamic> _surveyData = {
     "date_remplissage": DateTime.now().toIso8601String(),
     "fiche_no": "",
+    // I- Identité
     "age": null,
     "sexe": null,
-    "matrimonial": null,
+    "statut_matrimonial": null,
     "niveau_etude": null,
-    "lieu_residence": null,
+    "residence": null,
     "religion": null,
-    "sources_revenu": <String>[],
-    "vih_entendu": null,
-    "transmission": <String, String?>{
+    "source_principale_revenu": null,
+    // II- Connaissances
+    "entendu_parler_vih": null,
+    "transmission": {
       "Rapports sexuels non protégés": null,
-      "Voie sanguine (transfusion)": null,
-      "Contact avec de la salive": null,
-      "Transmission Mère-Enfant": null,
-      "Échange de seringues usagées": null,
+      "Voie sanguine": null,
+      "Piqûres de moustiques": null,
+      "Salive": null,
+      "De la mère à l’enfant": null,
     },
     "prevention": <String>[],
-    "perception_vih": null,
+    "personne_saine_porteuse": null,
+    // III- Pratiques
+    "deja_rapport_sexuel": null,
     "age_premier_rapport": null,
-    "nombre_partenaires": null,
-    "pratiques": <String, dynamic>{
-      "rapports_sexuels": null,
-      "preservatif": null,
-      "obstacles_preservatif": <String>[],
-      "tatouage_piercing": null,
-      "depistage": null,
-      "connaît_statut_partenaire": null,
-    },
-    "attitudes": <String, String?>{
-      "Q13": null,
-      "Q14": null,
-      "Q15": null,
-      "Q16": null,
-      "Q17": null,
-      "Q18": null,
-    },
-    "statut_final": null,
+    "nombre_partenaires_12_mois": null,
+    "utilise_preservatif": null,
+    "obstacles_preservatif": <String>[],
+    "tatouage_scarification_piercing_12_mois": null,
+    "depistage_3_mois": null,
+    "connait_etat_serologique_partenaire": null,
+    // IV- Attitudes
+    "pret_test_depistage": null,
+    "partager_toilettes": null,
+    "ami_avec_pvvih": null,
+    "travailler_etudier_avec_pvvih": null,
+    "rejetee_par_societe": null,
+    "depistage_important": null,
+    // V- Status sérologique
+    "statut_serologique": null,
   };
 
   @override
   void initState() {
     super.initState();
-    final String uuidUnique = const Uuid().v4();
-    _surveyData["fiche_no"] = "F-$uuidUnique";
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showIdentityPopup();
-    });
+    if (_isEditMode) {
+      _loadExistingData();
+    } else {
+      _surveyData["fiche_no"] = const Uuid().v4();
+      setState(() => _isLoading = false);
+    }
   }
 
-  void _showIdentityPopup() {
-    final TextEditingController identityController = TextEditingController();
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setPopupState) {
-            final isInputValid = identityController.text.trim().isNotEmpty;
-
-            return Dialog(
-              backgroundColor: AppColors.white,
-              elevation: 10,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-              insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Center(
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: AppColors.cyanLight.withOpacity(0.6),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.person_add_alt_1_outlined, color: AppColors.cyanDark, size: 32),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        "Identité de l'Enquêteur",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        "Veuillez saisir votre nom, prénom ou trigramme pour l'associer à cette fiche.",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        "Votre identification",
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-                      ),
-                      const SizedBox(height: 6),
-                      TextField(
-                        controller: identityController,
-                        autofocus: true,
-                        style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
-                        textCapitalization: TextCapitalization.words,
-                        onChanged: (value) {
-                          setPopupState(() {});
-                        },
-                        decoration: InputDecoration(
-                          hintText: "Ex: ezra",
-                          hintStyle: const TextStyle(color: AppColors.textHint, fontSize: 14),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          filled: true,
-                          fillColor: AppColors.sectionBg,
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.border),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.cyan, width: 1.5),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: isInputValid
-                            ? () {
-                          setState(() {
-                            _surveyData["fiche_no"] = "${_surveyData["fiche_no"]}-${identityController.text.trim().toLowerCase()}";
-                          });
-                          Navigator.pop(context);
-                          identityController.dispose();
-                        }
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.cyan,
-                          foregroundColor: AppColors.white,
-                          disabledBackgroundColor: AppColors.border,
-                          disabledForegroundColor: AppColors.textHint,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          elevation: 0,
-                        ),
-                        child: const Text("Créer et commencer", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
+  @override
+  void dispose() {
+    // Dispose all text controllers to avoid memory leaks
+    _sexeAutreController.dispose();
+    _statutMatrimonialAutreController.dispose();
+    _residenceAutreController.dispose();
+    _religionAutreController.dispose();
+    _sourceRevenuAutreController.dispose();
+    _agePremierRapportController.dispose();
+    _obstaclesAutreController.dispose();
+    super.dispose();
   }
 
+  Future<void> _loadExistingData() async {
+    setState(() => _isLoading = true);
+    final dbData = await DatabaseHelper.instance.obtenirFicheParId(widget.ficheId!);
+    if (dbData == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Fiche non trouvée."),
+          backgroundColor: Colors.red,
+        ));
+        Navigator.pop(context);
+      }
+      return;
+    }
+
+    final uiData = _reverseMapData(dbData);
+    _surveyData.addAll(uiData);
+    
+    // Update controllers with the loaded data
+    _sexeAutreController.text = uiData['sexe_autre'] ?? '';
+    _statutMatrimonialAutreController.text = uiData['statut_matrimonial_autre'] ?? '';
+    _residenceAutreController.text = uiData['residence_autre'] ?? '';
+    _religionAutreController.text = uiData['religion_autre'] ?? '';
+    _sourceRevenuAutreController.text = uiData['source_principale_revenu_autre'] ?? '';
+    _agePremierRapportController.text = uiData['age_premier_rapport']?.toString() ?? '';
+    _obstaclesAutreController.text = uiData['obstacles_preservatif_autre'] ?? '';
+
+    setState(() => _isLoading = false);
+  }
+
+  Map<String, dynamic> _reverseMapData(Map<String, dynamic> dbData) {
+    final uiData = <String, dynamic>{};
+
+    void extractValueAndOther(String uiKey, String uiOtherKey, List<String> standardOptions, String? dbValue) {
+      if (dbValue == null || dbValue.isEmpty) {
+        uiData[uiKey] = null;
+        uiData[uiOtherKey] = '';
+      } else if (standardOptions.contains(dbValue)) {
+        uiData[uiKey] = dbValue;
+        uiData[uiOtherKey] = '';
+      } else {
+        uiData[uiKey] = 'Autre';
+        uiData[uiOtherKey] = dbValue;
+      }
+    }
+
+    // Identité
+    uiData['fiche_no'] = dbData[DBConstantes.colFicheNumero];
+    uiData['date_remplissage'] = dbData[DBConstantes.colDateSaisie];
+    uiData['age'] = dbData[DBConstantes.colAgeTranche];
+    extractValueAndOther('sexe', 'sexe_autre', ['M', 'F'], dbData[DBConstantes.colSexe]);
+    extractValueAndOther('statut_matrimonial', 'statut_matrimonial_autre', ['Célibataire', 'En couple', 'Marié(e)'], dbData[DBConstantes.colStatutMatrimonial]);
+    uiData['niveau_etude'] = dbData[DBConstantes.colNiveauEtude];
+    extractValueAndOther('residence', 'residence_autre', ['Campus universitaire', 'Famille', 'Location'], dbData[DBConstantes.colResidence]);
+    extractValueAndOther('religion', 'religion_autre', ['Chrétienne', 'Musulmane', 'Traditionnelle', 'Sans religion'], dbData[DBConstantes.colReligion]);
+    extractValueAndOther('source_principale_revenu', 'source_principale_revenu_autre', ['Parents / famille', 'Travail personnel', 'Bourse'], dbData[DBConstantes.colSourceRevenu]);
+
+    // Connaissances
+    uiData['entendu_parler_vih'] = dbData[DBConstantes.colEntenduParlerVih];
+    uiData['transmission'] = {
+      "Rapports sexuels non protégés": dbData[DBConstantes.colTransRapportsSexuels],
+      "Voie sanguine": dbData[DBConstantes.colTransVoieSanguine],
+      "Piqûres de moustiques": dbData[DBConstantes.colTransMoustiques],
+      "Salive": dbData[DBConstantes.colTransSalive],
+      "De la mère à l’enfant": dbData[DBConstantes.colTransMereEnfant],
+    };
+
+    final prevention = <String>[];
+    if (dbData[DBConstantes.colPrevAbstinence] == 1) prevention.add("L’abstinence");
+    if (dbData[DBConstantes.colPrevSpermicides] == 1) prevention.add("L’utilisation de spermicides");
+    if (dbData[DBConstantes.colPrevFideliteDepistage] == 1) prevention.add("La fidélité et dépistage de couple");
+    if (dbData[DBConstantes.colPrevPilule] == 1) prevention.add("La pilule contraceptive");
+    if (dbData[DBConstantes.colPrevPreservatif] == 1) prevention.add("Le préservatif");
+    uiData['prevention'] = prevention;
+    uiData['personne_saine_porteuse'] = dbData[DBConstantes.colPersonneSainePorteuse];
+
+    // Pratiques
+    uiData['deja_rapport_sexuel'] = dbData[DBConstantes.colDejaRapportSexuel];
+    uiData['age_premier_rapport'] = dbData[DBConstantes.colAgePremierRapport];
+    uiData['nombre_partenaires_12_mois'] = dbData[DBConstantes.colNombrePartenaires12Mois];
+    uiData['utilise_preservatif'] = dbData[DBConstantes.colUtilisationPreservatif];
+    
+    final obstacles = <String>[];
+    if (dbData[DBConstantes.colObstacleAucun] == 1) obstacles.add("Aucun");
+    if (dbData[DBConstantes.colObstacleSensation] == 1) obstacles.add("Diminue la sensation");
+    if (dbData[DBConstantes.colObstacleCher] == 1) obstacles.add("Coûte cher");
+    if (dbData[DBConstantes.colObstacleHonte] == 1) obstacles.add("Honte à l’achat");
+    if (dbData[DBConstantes.colObstacleAutrePrecision] != null && (dbData[DBConstantes.colObstacleAutrePrecision] as String).isNotEmpty) {
+      obstacles.add("Autres à préciser");
+    }
+    uiData['obstacles_preservatif'] = obstacles;
+    uiData['obstacles_preservatif_autre'] = dbData[DBConstantes.colObstacleAutrePrecision] ?? "";
+    
+    uiData['tatouage_scarification_piercing_12_mois'] = dbData[DBConstantes.colTatouagePiercing12Mois];
+    uiData['depistage_3_mois'] = dbData[DBConstantes.colDepistage3Mois];
+    uiData['connait_etat_serologique_partenaire'] = dbData[DBConstantes.colConnaitStatutPartenaire];
+    
+    // Attitudes
+    uiData['pret_test_depistage'] = dbData[DBConstantes.colPretTestDepistage];
+    uiData['partager_toilettes'] = dbData[DBConstantes.colPartagerToilettes];
+    uiData['ami_avec_pvvih'] = dbData[DBConstantes.colAmiAvecPvvih];
+    uiData['travailler_etudier_avec_pvvih'] = dbData[DBConstantes.colTravaillerEtudierPvvih];
+    uiData['rejetee_par_societe'] = dbData[DBConstantes.colRejetaParSociete];
+    uiData['depistage_important'] = dbData[DBConstantes.colDepistageImportant];
+    
+    // Statut
+    uiData['statut_serologique'] = dbData[DBConstantes.colStatutSerologique];
+
+    return uiData;
+  }
+  
   Map<String, dynamic> _buildDBRecord() {
-    final transmission = Map<String, String?>.from(_surveyData["transmission"] ?? {});
-    final prevention = List<String>.from(_surveyData["prevention"] ?? []);
-    final sources = List<String>.from(_surveyData["sources_revenu"] ?? []);
-    final pratiques = Map<String, dynamic>.from(_surveyData["pratiques"] ?? {});
-    final obstacles = List<String>.from(pratiques["obstacles_preservatif"] ?? []);
-    final attitudes = Map<String, String?>.from(_surveyData["attitudes"] ?? {});
+    String? getAutreValue(String? mainValue, TextEditingController autreController) {
+      return mainValue == "Autre" ? autreController.text : mainValue;
+    }
 
-    String? t(String key) => transmission[key];
-    bool p(String label) => prevention.contains(label);
-    bool o(String label) => obstacles.contains(label);
+    final transmission = _surveyData["transmission"] as Map<String, dynamic>;
+    final prevention = _surveyData["prevention"] as List<String>;
+    final obstacles = _surveyData["obstacles_preservatif"] as List<String>;
 
     return {
       DBConstantes.colDateSaisie: _surveyData["date_remplissage"],
       DBConstantes.colFicheNumero: _surveyData["fiche_no"],
       DBConstantes.colAgeTranche: _surveyData["age"],
-      DBConstantes.colSexe: _surveyData["sexe"],
-      DBConstantes.colStatutMatrimonial: _surveyData["matrimonial"],
+      DBConstantes.colSexe: getAutreValue(_surveyData["sexe"], _sexeAutreController),
+      DBConstantes.colStatutMatrimonial: getAutreValue(_surveyData["statut_matrimonial"], _statutMatrimonialAutreController),
       DBConstantes.colNiveauEtude: _surveyData["niveau_etude"],
-      DBConstantes.colResidence: _surveyData["lieu_residence"],
-      DBConstantes.colReligion: _surveyData["religion"],
-      DBConstantes.colSourceRevenu: sources.join(","),
-      DBConstantes.colEntenduParlerVih: _surveyData["vih_entendu"],
-      DBConstantes.colTransRapportsSexuels: t("Rapports sexuels non protégés"),
-      DBConstantes.colTransMoustiques: t("Piqûres de moustiques"),
-      DBConstantes.colTransSalive: t("Contact avec de la salive"),
-      DBConstantes.colTransMereEnfant: t("Transmission Mère-Enfant"),
-      DBConstantes.colTransVoieSanguine: t("Échange de seringues usagées"),
-      DBConstantes.colPrevAbstinence: p("L'abstinence sexuelle") ? 1 : 0,
-      DBConstantes.colPrevFideliteDepistage: p("Être fidèle à un seul partenaire") ? 1 : 0,
-      DBConstantes.colPrevPreservatif: p("Utiliser correctement le préservatif") ? 1 : 0,
-      DBConstantes.colPrevSpermicides: p("L'utilisation de spermicides") ? 1 : 0,
-      DBConstantes.colPrevPilule: p("La pilule contraceptive") ? 1 : 0,
-      DBConstantes.colPersonneSainePorteuse: _surveyData["perception_vih"],
-      DBConstantes.colDejaRapportSexuel: pratiques["rapports_sexuels"],
-      DBConstantes.colAgePremierRapport: _surveyData["age_premier_rapport"],
-      DBConstantes.colNombrePartenaires12Mois: _surveyData["nombre_partenaires"],
-      DBConstantes.colUtilisationPreservatif: pratiques["preservatif"],
-      DBConstantes.colObstacleAucun: o("Aucun") ? 1 : 0,
-      DBConstantes.colObstacleSensation: o("Diminue la sensation") ? 1 : 0,
-      DBConstantes.colObstacleCher: o("Coûte cher") ? 1 : 0,
-      DBConstantes.colObstacleHonte: o("Honte à l'achat") ? 1 : 0,
-      DBConstantes.colObstacleAutrePrecision: null,
-      DBConstantes.colTatouagePiercing12Mois: pratiques["tatouage_piercing"],
-      DBConstantes.colDepistage3Mois: pratiques["depistage"],
-      DBConstantes.colConnaitStatutPartenaire: pratiques["connaît_statut_partenaire"],
-      DBConstantes.colPretTestDepistage: attitudes["Q13"],
-      DBConstantes.colPartagerToilettes: attitudes["Q14"],
-      DBConstantes.colAmiAvecPvvih: attitudes["Q15"],
-      DBConstantes.colTravaillerEtudierPvvih: attitudes["Q16"],
-      DBConstantes.colRejetaParSociete: attitudes["Q17"],
-      DBConstantes.colDepistageImportant: attitudes["Q18"],
-      DBConstantes.colStatutSerologique: _surveyData["statut_final"],
+      DBConstantes.colResidence: getAutreValue(_surveyData["residence"], _residenceAutreController),
+      DBConstantes.colReligion: getAutreValue(_surveyData["religion"], _religionAutreController),
+      DBConstantes.colSourceRevenu: getAutreValue(_surveyData["source_principale_revenu"], _sourceRevenuAutreController),
+      DBConstantes.colEntenduParlerVih: _surveyData["entendu_parler_vih"],
+      DBConstantes.colTransRapportsSexuels: transmission["Rapports sexuels non protégés"],
+      DBConstantes.colTransVoieSanguine: transmission["Voie sanguine"],
+      DBConstantes.colTransMoustiques: transmission["Piqûres de moustiques"],
+      DBConstantes.colTransSalive: transmission["Salive"],
+      DBConstantes.colTransMereEnfant: transmission["De la mère à l’enfant"],
+      DBConstantes.colPrevAbstinence: prevention.contains("L’abstinence") ? 1 : 0,
+      DBConstantes.colPrevSpermicides: prevention.contains("L’utilisation de spermicides") ? 1 : 0,
+      DBConstantes.colPrevFideliteDepistage: prevention.contains("La fidélité et dépistage de couple") ? 1 : 0,
+      DBConstantes.colPrevPilule: prevention.contains("La pilule contraceptive") ? 1 : 0,
+      DBConstantes.colPrevPreservatif: prevention.contains("Le préservatif") ? 1 : 0,
+      DBConstantes.colPersonneSainePorteuse: _surveyData["personne_saine_porteuse"],
+      DBConstantes.colDejaRapportSexuel: _surveyData["deja_rapport_sexuel"],
+      DBConstantes.colAgePremierRapport: int.tryParse(_agePremierRapportController.text),
+      DBConstantes.colNombrePartenaires12Mois: _surveyData["nombre_partenaires_12_mois"],
+      DBConstantes.colUtilisationPreservatif: _surveyData["utilise_preservatif"],
+      DBConstantes.colObstacleAucun: obstacles.contains("Aucun") ? 1 : 0,
+      DBConstantes.colObstacleSensation: obstacles.contains("Diminue la sensation") ? 1 : 0,
+      DBConstantes.colObstacleCher: obstacles.contains("Coûte cher") ? 1 : 0,
+      DBConstantes.colObstacleHonte: obstacles.contains("Honte à l’achat") ? 1 : 0,
+      DBConstantes.colObstacleAutrePrecision: obstacles.contains("Autres à préciser") ? _obstaclesAutreController.text : null,
+      DBConstantes.colTatouagePiercing12Mois: _surveyData["tatouage_scarification_piercing_12_mois"],
+      DBConstantes.colDepistage3Mois: _surveyData["depistage_3_mois"],
+      DBConstantes.colConnaitStatutPartenaire: _surveyData["connait_etat_serologique_partenaire"],
+      DBConstantes.colPretTestDepistage: _surveyData["pret_test_depistage"],
+      DBConstantes.colPartagerToilettes: _surveyData["partager_toilettes"],
+      DBConstantes.colAmiAvecPvvih: _surveyData["ami_avec_pvvih"],
+      DBConstantes.colTravaillerEtudierPvvih: _surveyData["travailler_etudier_avec_pvvih"],
+      DBConstantes.colRejetaParSociete: _surveyData["rejetee_par_societe"],
+      DBConstantes.colDepistageImportant: _surveyData["depistage_important"],
+      DBConstantes.colStatutSerologique: _surveyData["statut_serologique"],
     };
   }
 
@@ -256,10 +280,17 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> with TickerProvider
     setState(() => _isSaving = true);
     try {
       final record = _buildDBRecord();
-      final int newId = await DatabaseHelper.instance.insererFiche(record);
-      debugPrint("✅ Fiche enregistrée ID: $newId");
+      if (_isEditMode) {
+        await DatabaseHelper.instance.modifierFiche(widget.ficheId!, record);
+        debugPrint("✅ Fiche modifiée ID: ${widget.ficheId!}");
+      } else {
+        final int newId = await DatabaseHelper.instance.insererFiche(record);
+        debugPrint("✅ Fiche enregistrée ID: $newId");
+      }
+      
       if (!mounted) return;
-      _showSuccessDialog(newId);
+      _showSuccessDialog();
+
     } catch (e) {
       debugPrint("❌ Erreur: $e");
       if (!mounted) return;
@@ -269,7 +300,7 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> with TickerProvider
     }
   }
 
-  void _showSuccessDialog(int id) {
+  void _showSuccessDialog() {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -277,31 +308,42 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> with TickerProvider
         backgroundColor: AppColors.white,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(children: [
+        title: Row(children: [
           Icon(Icons.check_circle, color: AppColors.cyan, size: 28),
           SizedBox(width: 10),
-          Text("Enquête terminée"),
+          Text(_isEditMode ? "Enquête Modifiée" : "Enquête Sauvegardée"),
         ]),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Toutes les données ont été sauvegardées avec succès."),
-            const SizedBox(height: 12),
-            Text("Fiche N° $id", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.cyanDark)),
-          ],
-        ),
+        content: Text(_isEditMode
+            ? "La fiche N° ${_surveyData['fiche_no']} a été mise à jour avec succès."
+            : "La fiche N° ${_surveyData['fiche_no']} a été enregistrée avec succès."),
         actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const SurveyFormScreen()),
-              );
-            },
-            child: const Text("OK", style: TextStyle(color: AppColors.cyan, fontWeight: FontWeight.bold)),
-          ),
+          if (_isEditMode)
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+                Navigator.of(context).pop(true); // Pop form screen, return true
+              },
+              child: const Text("Retour au Détail", style: TextStyle(color: AppColors.cyan, fontWeight: FontWeight.bold)),
+            )
+          else ...[
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                context.go('/dashboard');
+              },
+              child: const Text("Retour au Dashboard", style: TextStyle(color: AppColors.cyan, fontWeight: FontWeight.bold)),
+            ),
+            TextButton(
+              onPressed: () {
+                 Navigator.pop(context);
+                 Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SurveyFormScreen()),
+                );
+              },
+              child: const Text("Nouvelle Fiche", style: TextStyle(color: AppColors.cyan, fontWeight: FontWeight.bold)),
+            ),
+          ]
         ],
       ),
     );
@@ -330,869 +372,288 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> with TickerProvider
     );
   }
 
-  void _showCustomSuccessDialog({required String titre, required String message}) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.white,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(children: [
-          const Icon(Icons.check_circle, color: AppColors.cyan, size: 28),
-          const SizedBox(width: 10),
-          Text(titre),
-        ]),
-        content: Text(message, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Génial", style: TextStyle(color: AppColors.cyan, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _exporterFichesVersExcel() async {
-    setState(() => _isSaving = true);
-    try {
-      final List<Map<String, dynamic>> fiches = await DatabaseHelper.instance.obtenirToutesLesFiches();
-
-      if (fiches.isEmpty) {
-        if (!mounted) return;
-        _showErrorDialog("Aucune fiche enregistrée à exporter.");
-        return;
-      }
-
-      var excel = Excel.createExcel();
-      Sheet feuille = excel['Enquetes_VIH'];
-      excel.delete('Sheet1');
-
-      List<String> entetes = [
-        "Numéro Fiche", "Date Saisie", "Tranche d'âge", "Sexe",
-        "Statut Matrimonial", "Niveau d'étude", "Résidence", "Statut Final"
-      ];
-      feuille.appendRow(entetes.map((e) => TextCellValue(e)).toList());
-
-      for (var fiche in fiches) {
-        feuille.appendRow([
-          TextCellValue(fiche[DBConstantes.colFicheNumero]?.toString() ?? ''),
-          TextCellValue(fiche[DBConstantes.colDateSaisie]?.toString() ?? ''),
-          TextCellValue(fiche[DBConstantes.colAgeTranche]?.toString() ?? ''),
-          TextCellValue(fiche[DBConstantes.colSexe]?.toString() ?? ''),
-          TextCellValue(fiche[DBConstantes.colStatutMatrimonial]?.toString() ?? ''),
-          TextCellValue(fiche[DBConstantes.colNiveauEtude]?.toString() ?? ''),
-          TextCellValue(fiche[DBConstantes.colResidence]?.toString() ?? ''),
-          TextCellValue(fiche[DBConstantes.colStatutSerologique]?.toString() ?? ''),
-        ]);
-      }
-
-      final List<int>? bytesExcel = excel.encode();
-      if (bytesExcel == null) {
-        _showErrorDialog("Échec de l'encodage du fichier Excel.");
-        return;
-      }
-
-      final String dateStr = DateTime.now().toIso8601String().split('T')[0].replaceAll('-', '');
-      final String nomFichierDefaut = "export_enquetes_$dateStr.xlsx";
-
-      String? pathSelectionne = await FilePicker.platform.saveFile(
-        dialogTitle: 'Choisir l\'emplacement du fichier Excel',
-        fileName: nomFichierDefaut,
-        type: FileType.custom,
-        allowedExtensions: ['xlsx'],
-        bytes: Uint8List.fromList(bytesExcel),
-      );
-
-      if (pathSelectionne == null) {
-        if (mounted) setState(() => _isSaving = false);
-        return;
-      }
-
-      if (!pathSelectionne.endsWith('.xlsx')) {
-        pathSelectionne = '$pathSelectionne.xlsx';
-      }
-
-      final File fichierPhysique = File(pathSelectionne);
-      if (!await fichierPhysique.exists() || (await fichierPhysique.length()) == 0) {
-        await fichierPhysique.writeAsBytes(bytesExcel);
-      }
-
-      if (!mounted) return;
-      _showCustomSuccessDialog(
-          titre: "Exportation réussie",
-          message: "Le fichier Excel a été enregistré sous :\n${fichierPhysique.path}"
-      );
-
-    } catch (e) {
-      debugPrint("❌ Erreur lors de l'exportation: $e");
-      if (!mounted) return;
-      _showErrorDialog("Échec de l'exportation.\nDétails: $e");
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isLargeScreen = screenWidth > 900;
-    final columnCount = isLargeScreen ? 3 : (screenWidth > 600 ? 2 : 1);
-    final hPad = screenWidth > 600 ? 24.0 : 16.0;
-
     return Scaffold(
       backgroundColor: AppColors.white,
-      resizeToAvoidBottomInset: false,
-      body: SafeArea(
-        child: Column(
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(hPad),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 16),
-                child: _buildFormContent(columnCount),
-              ),
-            ),
-            _buildBottomNav(hPad),
+            Text(_isEditMode ? "Modifier l'Enquête" : "Questionnaire", style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+            const SizedBox(height: 4),
+            Text("Fiche N°: ${_surveyData['fiche_no']}", style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           ],
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => _isEditMode ? Navigator.pop(context) : context.go('/dashboard'),
         ),
       ),
-    );
-  }
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: AppColors.cyan))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                   _buildSectionTitle("I- Identité"),
+                   _buildRadioGroup("1- Age", ["16-20 ans", "21-25 ans", "26-30 ans", "+30 ans"], "age"),
+                   _buildRadioGroupWithOther("2- Sexe", ["M", "F"], "sexe", _sexeAutreController),
+                   _buildRadioGroupWithOther("3- Statut matrimonial", ["Célibataire", "En couple", "Marié(e)"], "statut_matrimonial", _statutMatrimonialAutreController),
+                   _buildRadioGroup("4- Niveau d’Etude", ["1ère cycle", "2ème cycle", "3ème cycle"], "niveau_etude"),
+                   _buildRadioGroupWithOther("5- Résidence", ["Campus universitaire", "Famille", "Location"], "residence", _residenceAutreController),
+                   _buildRadioGroupWithOther("6- Religion", ["Chrétienne", "Musulmane", "Traditionnelle", "Sans religion"], "religion", _religionAutreController),
+                   _buildRadioGroupWithOther("7- Source principale de revenu", ["Parents / famille", "Travail personnel", "Bourse"], "source_principale_revenu", _sourceRevenuAutreController),
 
-  Widget _buildHeader(double hPad) {
-    return Column(
-      children: [
-        Padding(
-          padding: EdgeInsets.fromLTRB(hPad - 8, 8, hPad - 8, 0),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.cyanLight,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.flash_on, color: AppColors.cyan, size: 20),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Enquête VIH-SIDA",
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary),
-                    ),
-                    Text(
-                      _surveyData["fiche_no"] ?? "",
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, color: AppColors.textPrimary),
-                onSelected: (value) {
-                  if (value == 'export') _exporterFichesVersExcel();
-                },
-                itemBuilder: (BuildContext context) => [
-                  const PopupMenuItem<String>(
-                    value: 'export',
-                    child: Row(
-                      children: [
-                        Icon(Icons.ios_share, color: AppColors.cyan, size: 18),
-                        SizedBox(width: 8),
-                        Text('Exporter vers Excel', style: TextStyle(fontSize: 14)),
-                      ],
-                    ),
-                  ),
+                   _buildSectionTitle("II- Connaissances"),
+                   _buildRadioGroup("1- Avez-vous déjà entendu parler du VIH/SIDA", ["OUI", "NON"], "entendu_parler_vih"),
+                   
+                   const Padding(
+                     padding: EdgeInsets.symmetric(vertical: 8.0),
+                     child: Text("2- Selon vous, Le VIH se transmet par :", style: TextStyle(fontWeight: FontWeight.w500)),
+                   ),
+                   _buildTransmissionRadioGroup("Rapports sexuels non protégés"),
+                   _buildTransmissionRadioGroup("Voie sanguine"),
+                   _buildTransmissionRadioGroup("Piqûres de moustiques"),
+                   _buildTransmissionRadioGroup("Salive"),
+                   _buildTransmissionRadioGroup("De la mère à l’enfant"),
+
+                   _buildCheckboxGroup("3- Quels sont les moyens de prévention du VIH", ["L’abstinence", "L’utilisation de spermicides", "La fidélité et dépistage de couple", "La pilule contraceptive", "Le préservatif"], "prevention"),
+                   _buildRadioGroup("4- Une personne apparemment en bonne santé peut-elle être porteuse du VIH ?", ["Oui", "Non", "Ne sait pas"], "personne_saine_porteuse"),
+
+                   _buildSectionTitle("III- Pratiques"),
+                   _buildRadioGroup("5- Avez-vous déjà eu un rapport sexuel ?", ["Oui", "Non"], "deja_rapport_sexuel"),
+                  if (_surveyData["deja_rapport_sexuel"] == "Oui")
+                     _buildTextField("6- Si oui, âge du premier rapport sexuel", _agePremierRapportController, isNumeric: true),
+                   _buildRadioGroup("7- Nombre de partenaires sexuels au cours des 12 derniers mois", ["Aucun", "Un seul", "2 à 3", "+ de 3"], "nombre_partenaires_12_mois"),
+                   _buildRadioGroup("8- Utilisez-vous le préservatif ?", ["Toujours", "Parfois", "Jamais"], "utilise_preservatif"),
+                   _buildCheckboxGroupWithOther("9- Selon vous quels sont les obstacles à l’utilisation du préservatif ?", ["Aucun", "Diminue la sensation", "Coûte cher", "Honte à l’achat"], "obstacles_preservatif", _obstaclesAutreController),
+                   _buildRadioGroup("10- Avez-vous fait soit des tatouages, soit des scarifications ou un piercing ces 12 derniers mois ?", ["Oui", "Non"], "tatouage_scarification_piercing_12_mois"),
+                   _buildRadioGroup("11- Avez-vous fait le dépistage pendant ces 3 derniers mois ?", ["Oui", "Non"], "depistage_3_mois"),
+                   _buildRadioGroup("12- Connaissez-vous l’état sérologique de votre partenaire ?", ["Oui", "Non"], "connait_etat_serologique_partenaire"),
+
+                   _buildSectionTitle("IV- Attitudes"),
+                   _buildRadioGroup("13- Seriez-vous prêt(e) à effectuer une test de dépistage du VIH ?", ["Oui", "Non"], "pret_test_depistage"),
+                   _buildRadioGroup("14- Accepteriez-vous de partager des toilettes avec une personne vivant avec le VIH/SIDA ?", ["Oui", "Non"], "partager_toilettes"),
+                   _buildRadioGroup("15- Accepteriez-vous d’être ami(e) avec une personne vivant avec le VIH ?", ["Oui", "Non"], "ami_avec_pvvih"),
+                   _buildRadioGroup("16- Accepteriez-vous de travailler ou d’étudier avec une personne vivant avec le VIH/SIDA ?", ["Oui", "Non"], "travailler_etudier_avec_pvvih"),
+                   _buildRadioGroup("17- Une personne vivant avec le VIH doit-elle être rejetée par la société ?", ["Oui", "Non"], "rejetee_par_societe"),
+                   _buildRadioGroup("18- Pensez-vous que le dépistage du VIH est important ?", ["Oui", "Non", "Ne sait pas"], "depistage_important"),
+
+                   _buildSectionTitle("V- Status sérologique"),
+                   _buildRadioGroup("Réactif/Non réactif", ["Réactif", "Non réactif"], "statut_serologique"),
                 ],
               ),
-            ],
+            ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ElevatedButton(
+          onPressed: _isSaving || _isLoading ? null : _finaliserEnquete,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.cyan,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
+          child: _isSaving
+              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+              : Text(_isEditMode ? "Mettre à Jour la Fiche" : "Enregistrer la Fiche", style: TextStyle(fontWeight: FontWeight.bold)),
         ),
-        const SizedBox(height: 10),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: hPad - 8),
-          child: const LinearProgressIndicator(
-            value: 0.5,
-            backgroundColor: Color(0xFFE5E7EB),
-            valueColor: AlwaysStoppedAnimation<Color>(AppColors.cyan),
-            minHeight: 3,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFormContent(int columnCount) {
-    return Column(
-      children: [
-        _buildFormSection(columnCount),
-      ],
-    );
-  }
-
-  Widget _buildFormSection(int columnCount) {
-    final transmission = _surveyData["transmission"] as Map<String, String?>;
-    final pratiques = _surveyData["pratiques"] as Map<String, dynamic>;
-    final attitudes = _surveyData["attitudes"] as Map<String, String?>;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ═══════════════════════════════════════════════════════════
-        //  SECTION 1 : INFORMATIONS GÉNÉRALES
-        // ═══════════════════════════════════════════════════════════
-        _buildSectionTitle("📋 Informations Générales"),
-        const SizedBox(height: 12),
-        _buildReadOnlyFields(),
-        const SizedBox(height: 24),
-
-        // ═══════════════════════════════════════════════════════════
-        //  SECTION 2 : PROFIL SOCIODÉMOGRAPHIQUE
-        // ═══════════════════════════════════════════════════════════
-        _buildSectionTitle("👤 Profil Sociodémographique"),
-        const SizedBox(height: 12),
-        _buildGridFields(
-          columnCount: columnCount,
-          fields: [
-            _buildFieldWidget(
-              "Tranche d'âge",
-              _RadioList(
-                title: "",
-                options: const ["15-19 ans", "20-24 ans", "25-49 ans"],
-                selectedValue: _surveyData["age"],
-                onChanged: (val) => setState(() => _surveyData["age"] = val),
-              ),
-            ),
-            _buildFieldWidget(
-              "Sexe",
-              _RadioList(
-                title: "",
-                options: const ["Masculin", "Féminin"],
-                selectedValue: _surveyData["sexe"],
-                onChanged: (val) => setState(() => _surveyData["sexe"] = val),
-              ),
-            ),
-            _buildFieldWidget(
-              "Statut matrimonial",
-              _RadioList(
-                title: "",
-                options: const ["Célibataire", "Marié(e) / En couple", "Divorcé(e) / Veuf(ve)"],
-                selectedValue: _surveyData["matrimonial"],
-                onChanged: (val) => setState(() => _surveyData["matrimonial"] = val),
-              ),
-            ),
-            _buildFieldWidget(
-              "Niveau d'étude",
-              _RadioList(
-                title: "",
-                options: const ["Aucun niveau", "Primaire", "Secondaire", "Supérieur"],
-                selectedValue: _surveyData["niveau_etude"],
-                onChanged: (val) => setState(() => _surveyData["niveau_etude"] = val),
-              ),
-            ),
-            _buildFieldWidget(
-              "Lieu de résidence",
-              _RadioList(
-                title: "",
-                options: const ["Urbain", "Rural"],
-                selectedValue: _surveyData["lieu_residence"],
-                onChanged: (val) => setState(() => _surveyData["lieu_residence"] = val),
-              ),
-            ),
-            _buildFieldWidget(
-              "Religion",
-              _RadioList(
-                title: "",
-                options: const ["Chrétienne", "Musulmane", "Traditionnelle", "Sans religion"],
-                selectedValue: _surveyData["religion"],
-                onChanged: (val) => setState(() => _surveyData["religion"] = val),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        _buildCheckListField(
-          "Sources de revenu (sélectionner plusieurs)",
-          const ["Agriculture / Élevage", "Commerce", "Emploi salarié", "Aide familiale", "Pas de revenu"],
-          List<String>.from(_surveyData["sources_revenu"]),
-          (updatedList) => setState(() => _surveyData["sources_revenu"] = updatedList),
-        ),
-        const SizedBox(height: 24),
-
-        // ═══════════════════════════════════════════════════════════
-        //  SECTION 3 : CONNAISSANCES SUR LE VIH
-        // ═══════════════════════════════════════════════════════════
-        _buildSectionTitle("🧠 Connaissances sur le VIH-SIDA"),
-        const SizedBox(height: 12),
-        _buildFieldWidget(
-          "Avez-vous déjà entendu parler du VIH/SIDA ?",
-          _RadioList(
-            title: "",
-            options: const ["Oui", "Non"],
-            selectedValue: _surveyData["vih_entendu"],
-            onChanged: (val) => setState(() => _surveyData["vih_entendu"] = val),
-          ),
-        ),
-        const SizedBox(height: 16),
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 8),
-          child: Text("Le VIH peut-il se transmettre par :", style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 13)),
-        ),
-        _buildGridFields(
-          columnCount: 2,
-          fields: transmission.keys.map((key) {
-            return _buildFieldWidget(
-              key,
-              _RadioList(
-                title: "",
-                options: const ["Oui", "Non", "Ne sait pas"],
-                selectedValue: transmission[key],
-                onChanged: (val) => setState(() => transmission[key] = val),
-              ),
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 16),
-        _buildCheckListField(
-          "Comment se protéger du VIH ?",
-          const ["L'abstinence sexuelle", "Être fidèle à un seul partenaire", "Utiliser correctement le préservatif", "La pilule contraceptive", "L'utilisation de spermicides"],
-          List<String>.from(_surveyData["prevention"]),
-          (updatedList) => setState(() => _surveyData["prevention"] = updatedList),
-        ),
-        const SizedBox(height: 16),
-        _buildFieldWidget(
-          "Une personne d'apparence saine peut-elle porter le VIH ?",
-          _RadioList(
-            title: "",
-            options: const ["Oui", "Non", "Ne sait pas"],
-            selectedValue: _surveyData["perception_vih"],
-            onChanged: (val) => setState(() => _surveyData["perception_vih"] = val),
-          ),
-        ),
-        const SizedBox(height: 24),
-
-        // ═══════════════════════════════════════════════════════════
-        //  SECTION 4 : PRATIQUES ET COMPORTEMENTS
-        // ═══════════════════════════════════════════════════════════
-        _buildSectionTitle("⚠️ Pratiques et Comportements"),
-        const SizedBox(height: 12),
-        _buildGridFields(
-          columnCount: columnCount,
-          fields: [
-            _buildFieldWidget(
-              "Avez-vous eu des rapports sexuels ?",
-              _RadioList(
-                title: "",
-                options: const ["Oui", "Non"],
-                selectedValue: pratiques["rapports_sexuels"],
-                onChanged: (val) => setState(() => pratiques["rapports_sexuels"] = val),
-              ),
-            ),
-            if (pratiques["rapports_sexuels"] == "Oui")
-              _buildFieldWidget(
-                "Âge du premier rapport",
-                _buildTextFieldInt(
-                  value: _surveyData["age_premier_rapport"],
-                  onChanged: (val) => setState(() => _surveyData["age_premier_rapport"] = val),
-                ),
-              ),
-            if (pratiques["rapports_sexuels"] == "Oui")
-              _buildFieldWidget(
-                "Nombre de partenaires (12 mois)",
-                _RadioList(
-                  title: "",
-                  options: const ["Aucun", "Un seul", "2 à 3", "Plus de 3"],
-                  selectedValue: _surveyData["nombre_partenaires"],
-                  onChanged: (val) => setState(() => _surveyData["nombre_partenaires"] = val),
-                ),
-              ),
-            _buildFieldWidget(
-              "Utilisation du préservatif",
-              _RadioList(
-                title: "",
-                options: const ["Toujours", "Parfois", "Jamais"],
-                selectedValue: pratiques["preservatif"],
-                onChanged: (val) => setState(() => pratiques["preservatif"] = val),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        _buildCheckListField(
-          "Obstacles à l'utilisation du préservatif",
-          const ["Aucun", "Diminue la sensation", "Coûte cher", "Honte à l'achat"],
-          List<String>.from(pratiques["obstacles_preservatif"]),
-          (updatedList) => setState(() => pratiques["obstacles_preservatif"] = updatedList),
-        ),
-        const SizedBox(height: 16),
-        _buildGridFields(
-          columnCount: columnCount,
-          fields: [
-            _buildFieldWidget(
-              "Tatouages/Piercings (12 mois)",
-              _RadioList(
-                title: "",
-                options: const ["Oui", "Non"],
-                selectedValue: pratiques["tatouage_piercing"],
-                onChanged: (val) => setState(() => pratiques["tatouage_piercing"] = val),
-              ),
-            ),
-            _buildFieldWidget(
-              "Dépistage (3 derniers mois)",
-              _RadioList(
-                title: "",
-                options: const ["Oui", "Non"],
-                selectedValue: pratiques["depistage"],
-                onChanged: (val) => setState(() => pratiques["depistage"] = val),
-              ),
-            ),
-            _buildFieldWidget(
-              "Connaissez-vous le statut du partenaire ?",
-              _RadioList(
-                title: "",
-                options: const ["Oui", "Non"],
-                selectedValue: pratiques["connaît_statut_partenaire"],
-                onChanged: (val) => setState(() => pratiques["connaît_statut_partenaire"] = val),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
-
-        // ═══════════════════════════════════════════════════════════
-        //  SECTION 5 : ATTITUDES ET STIGMATISATION
-        // ═══════════════════════════════════════════════════════════
-        _buildSectionTitle("💭 Attitudes et Stigmatisation"),
-        const SizedBox(height: 12),
-        _buildAttitudeCards(attitudes),
-        const SizedBox(height: 24),
-
-        // ═══════════════════════════════════════════════════════════
-        //  SECTION 6 : STATUT SÉROLOGIQUE FINAL
-        // ═══════════════════════════════════════════════════════════
-        _buildSectionTitle("🔬 Statut Sérologique Final"),
-        const SizedBox(height: 12),
-        _buildFieldWidget(
-          "Résultat du test",
-          _RadioList(
-            title: "",
-            options: const ["Séronégatif", "Séropositif", "Indéterminé"],
-            selectedValue: _surveyData["statut_final"],
-            onChanged: (val) => setState(() => _surveyData["statut_final"] = val),
-          ),
-        ),
-        const SizedBox(height: 32),
-      ],
+      ),
     );
   }
 
   Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.cyanDark),
+    return Padding(
+      padding: const EdgeInsets.only(top: 24.0, bottom: 12.0),
+      child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.cyanDark)),
     );
   }
 
-  Widget _buildReadOnlyFields() {
-    return Column(
-      children: [
-        _buildReadOnlyField("Date de remplissage", _surveyData["date_remplissage"]),
-        const SizedBox(height: 12),
-        _buildReadOnlyField("Numéro de fiche", _surveyData["fiche_no"]),
-      ],
-    );
-  }
-
-  Widget _buildReadOnlyField(String label, String? value) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.sectionBg,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-          const SizedBox(height: 4),
-          Text(value ?? '—', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGridFields({required int columnCount, required List<Widget> fields}) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return GridView.count(
-          crossAxisCount: columnCount,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          children: fields,
-        );
-      },
-    );
-  }
-
-  Widget _buildFieldWidget(String label, Widget child) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.sectionBg,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-          const SizedBox(height: 8),
-          Expanded(child: child),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCheckListField(String title, List<String> options, List<String> selectedValues, Function(List<String>) onChanged) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.sectionBg,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-          const SizedBox(height: 8),
-          _CheckList(
-            title: "",
-            options: options,
-            selectedValues: selectedValues,
-            onChanged: onChanged,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTextFieldInt({required String? value, required Function(String) onChanged}) {
-    return TextFormField(
-      initialValue: value,
-      keyboardType: TextInputType.number,
-      style: const TextStyle(fontSize: 12),
-      decoration: InputDecoration(
-        hintText: "Ex: 16",
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        filled: true,
-        fillColor: AppColors.white,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-      onChanged: onChanged,
-    );
-  }
-
-  Widget _buildAttitudeCards(Map<String, String?> attitudes) {
-    return Column(
-      children: [
-        _AttitudeCard(
-          label: "Êtes-vous prêt(e) à faire un test de dépistage ?",
-          selectedValue: attitudes["Q13"],
-          onChanged: (val) => setState(() => attitudes["Q13"] = val),
-        ),
-        _AttitudeCard(
-          label: "Accepteriez-vous de partager les toilettes avec une PVVIH ?",
-          selectedValue: attitudes["Q14"],
-          onChanged: (val) => setState(() => attitudes["Q14"] = val),
-        ),
-        _AttitudeCard(
-          label: "Resteriez-vous ami(e) avec une personne séropositive ?",
-          selectedValue: attitudes["Q15"],
-          onChanged: (val) => setState(() => attitudes["Q15"] = val),
-        ),
-        _AttitudeCard(
-          label: "Une PVVIH devrait-elle avoir le droit de travailler/étudier ?",
-          selectedValue: attitudes["Q16"],
-          onChanged: (val) => setState(() => attitudes["Q16"] = val),
-        ),
-        _AttitudeCard(
-          label: "Une PVVIH est-elle généralement rejetée par la société ?",
-          selectedValue: attitudes["Q17"],
-          onChanged: (val) => setState(() => attitudes["Q17"] = val),
-        ),
-        _AttitudeCard(
-          label: "Est-il important d'en parler ouvertement en famille ?",
-          selectedValue: attitudes["Q18"],
-          onChanged: (val) => setState(() => attitudes["Q18"] = val),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBottomNav(double hPad) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 20),
-      decoration: const BoxDecoration(
-        color: AppColors.white,
-        border: Border(top: BorderSide(color: AppColors.border, width: 1)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          TextButton(
-            onPressed: () => context.go('/dashboard'),
-            child: const Text(
-              'Annuler',
-              style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+  Widget _buildTextField(String label, TextEditingController controller, {bool isNumeric = false}) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: controller,
+              keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                hintText: isNumeric ? "Âge" : "Préciser...",
+              ),
             ),
-          ),
-          const Spacer(),
-          if (_isSaving)
-            const CircularProgressIndicator(color: AppColors.cyan)
-          else
-            _CyanBtn(
-              text: 'Finaliser',
-              onTap: _finaliserEnquete,
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
-}
 
-// ────────────────────────────────────────────────────────────────────
-//  WIDGETS COMPOSANTS
-// ────────────────────────────────────────────────────────────────────
-
-class _AttitudeCard extends StatelessWidget {
-  final String label;
-  final String? selectedValue;
-  final ValueChanged<String?> onChanged;
-
-  const _AttitudeCard({
-    required this.label,
-    required this.selectedValue,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border),
+  Widget _buildRadioGroup(String title, List<String> options, String dataKey) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+            ...options.map((option) => RadioListTile<String>(
+                  title: Text(option),
+                  value: option,
+                  groupValue: _surveyData[dataKey],
+                  onChanged: (String? value) {
+                    setState(() {
+                      _surveyData[dataKey] = value;
+                    });
+                  },
+                )),
+          ],
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary, height: 1.3)),
-          const SizedBox(height: 10),
-          Row(
-            children: ["Oui", "Non", "Ne sait pas"].map((option) {
-              final isSelected = selectedValue == option;
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
-                  child: InkWell(
-                    onTap: () => onChanged(option),
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color: isSelected ? AppColors.cyan : AppColors.sectionBg,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: isSelected ? AppColors.cyan : AppColors.border),
-                      ),
-                      child: Text(
-                        option,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 11, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? AppColors.white : AppColors.textSecondary),
-                      ),
-                    ),
+    );
+  }
+
+  Widget _buildTransmissionRadioGroup(String mode) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(mode, style: const TextStyle(fontWeight: FontWeight.w500)),
+            ...['OUI', 'NON', 'Ne sait pas'].map((option) => RadioListTile<String>(
+                  title: Text(option),
+                  value: option,
+                  groupValue: _surveyData['transmission'][mode],
+                  onChanged: (String? value) {
+                    setState(() {
+                      _surveyData['transmission'][mode] = value;
+                    });
+                  },
+                )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRadioGroupWithOther(String title, List<String> options, String dataKey, TextEditingController otherController) {
+    List<String> allOptions = [...options, 'Autre'];
+    
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+            ...allOptions.map((option) => RadioListTile<String>(
+                  title: Text(option),
+                  value: option,
+                  groupValue: _surveyData[dataKey],
+                  onChanged: (String? value) {
+                    setState(() {
+                      _surveyData[dataKey] = value;
+                    });
+                  },
+                )),
+            if (_surveyData[dataKey] == 'Autre')
+              Padding(
+                padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 8.0),
+                child: TextField(
+                  controller: otherController,
+                  decoration: const InputDecoration(
+                    labelText: "Autre, à préciser",
+                    border: OutlineInputBorder(),
                   ),
-                );
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCheckboxGroup(String title, List<String> options, String dataKey) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+            ...options.map((option) {
+              return CheckboxListTile(
+                title: Text(option),
+                value: (_surveyData[dataKey] as List<String>).contains(option),
+                onChanged: (bool? checked) {
+                  setState(() {
+                    if (checked == true) {
+                      (_surveyData[dataKey] as List<String>).add(option);
+                    } else {
+                      (_surveyData[dataKey] as List<String>).remove(option);
+                    }
+                  });
+                },
               );
             }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RadioList extends StatelessWidget {
-  final String title;
-  final List<String> options;
-  final String? selectedValue;
-  final ValueChanged<String?> onChanged;
-
-  const _RadioList({
-    required this.title,
-    required this.options,
-    required this.selectedValue,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: options.map((option) {
-        return GestureDetector(
-          onTap: () => onChanged(option),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(
-              children: [
-                Radio<String>(
-                  value: option,
-                  groupValue: selectedValue,
-                  onChanged: onChanged,
-                  activeColor: AppColors.cyan,
-                ),
-                Expanded(
-                  child: Text(
-                    option,
-                    style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-}
-
-class _CheckList extends StatefulWidget {
-  final String title;
-  final List<String> options;
-  final List<String> selectedValues;
-  final ValueChanged<List<String>> onChanged;
-
-  const _CheckList({
-    required this.title,
-    required this.options,
-    required this.selectedValues,
-    required this.onChanged,
-  });
-
-  @override
-  State<_CheckList> createState() => _CheckListState();
-}
-
-class _CheckListState extends State<_CheckList> {
-  late List<String> _selected;
-
-  @override
-  void initState() {
-    super.initState();
-    _selected = List.from(widget.selectedValues);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: widget.options.map((option) {
-        final isChecked = _selected.contains(option);
-        return GestureDetector(
-          onTap: () {
-            setState(() {
-              if (isChecked) {
-                _selected.remove(option);
-              } else {
-                _selected.add(option);
-              }
-            });
-            widget.onChanged(_selected);
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(
-              children: [
-                Checkbox(
-                  value: isChecked,
-                  onChanged: (_) {
-                    setState(() {
-                      if (isChecked) {
-                        _selected.remove(option);
-                      } else {
-                        _selected.add(option);
-                      }
-                    });
-                    widget.onChanged(_selected);
-                  },
-                  activeColor: AppColors.cyan,
-                ),
-                Expanded(
-                  child: Text(
-                    option,
-                    style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-}
-
-class _IconBtn extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _IconBtn({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: AppColors.cyanLight,
-          borderRadius: BorderRadius.circular(12),
+          ],
         ),
-        child: Icon(icon, color: AppColors.cyan, size: 20),
       ),
     );
   }
-}
-
-class _CyanBtn extends StatelessWidget {
-  final String text;
-  final VoidCallback onTap;
-
-  const _CyanBtn({required this.text, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: onTap,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.cyan,
-        foregroundColor: AppColors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+  
+  Widget _buildCheckboxGroupWithOther(String title, List<String> options, String dataKey, TextEditingController otherController) {
+    List<String> allOptions = [...options, 'Autres à préciser'];
+    
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+            ...allOptions.map((option) {
+              return CheckboxListTile(
+                title: Text(option),
+                value: (_surveyData[dataKey] as List<String>).contains(option),
+                onChanged: (bool? checked) {
+                  setState(() {
+                    if (checked == true) {
+                      (_surveyData[dataKey] as List<String>).add(option);
+                    } else {
+                      (_surveyData[dataKey] as List<String>).remove(option);
+                    }
+                  });
+                },
+              );
+            }).toList(),
+            if ((_surveyData[dataKey] as List<String>).contains('Autres à préciser'))
+              Padding(
+                padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 8.0),
+                child: TextField(
+                  controller: otherController,
+                  decoration: const InputDecoration(
+                    labelText: "Autres, à préciser",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
-      child: Text(text, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
     );
   }
 }
