@@ -1,8 +1,9 @@
-
 import 'package:flutter/material.dart';
-import 'package:recupdata/Dadabase/database_helper.dart';
-import 'package:recupdata/Features/Form/fromrecup.dart';
-import 'package:recupdata/Features/ListScreen/RecordDetailScreen.dart' hide DBConstantes, DatabaseHelper, exporterEtEventuellementVider;
+import 'package:go_router/go_router.dart';
+import 'package:recupdata/Core/utils/export_util.dart';
+import 'package:recupdata/Features/Widgets/app_widgets.dart';
+import '../../Dadabase/database_helper.dart'; // <-- VRAI export + BDD + Constantes
+
 class RecordListScreen extends StatefulWidget {
   const RecordListScreen({super.key});
 
@@ -11,63 +12,95 @@ class RecordListScreen extends StatefulWidget {
 }
 
 class _RecordListScreenState extends State<RecordListScreen> {
-  late Future<List<Map<String, dynamic>>> _recordsFuture;
-  final int _currentIndex = 1;
-  final TextEditingController _searchController = TextEditingController();
-  List<Map<String, dynamic>> _allFiches = [];
-  List<Map<String, dynamic>> _filteredFiches = [];
+  bool _isLoading = true;
   bool _isExporting = false;
+  
+  List<Map<String, dynamic>> _allRecords = []; 
+  List<Map<String, dynamic>> _filteredRecords = []; 
+  String? _filter; 
 
   @override
   void initState() {
     super.initState();
     _refreshList();
-    _searchController.addListener(_onSearchChanged);
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  Future<void> _refreshList() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+    try {
+      final data = await DatabaseHelper.instance.obtenirToutesLesFiches();
+      _allRecords = data;
+      _applyFilter(); 
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erreur de chargement: $e")),
+        );
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
-  void _onSearchChanged() {
-    final query = _searchController.text.toLowerCase();
+  void _applyFilter() {
     setState(() {
-      if (query.isEmpty) {
-        _filteredFiches = _allFiches;
+      if (_filter == null || _filter == 'Tous') {
+        _filteredRecords = List.from(_allRecords);
       } else {
-        _filteredFiches = _allFiches.where((fiche) {
-          final numero = (fiche[DBConstantes.colFicheNumero] ?? '').toString().toLowerCase();
-          final date = (fiche[DBConstantes.colDateSaisie] ?? '').toString().toLowerCase();
-          return numero.contains(query) || date.contains(query);
+        _filteredRecords = _allRecords.where((record) {
+          final statut = record[DBConstantes.colStatutSerologique] ?? 'Non défini';
+          return statut.toString().toLowerCase() == _filter!.toLowerCase();
         }).toList();
       }
+      _isLoading = false;
     });
   }
 
-  void _refreshList() {
-    setState(() {
-      _recordsFuture = DatabaseHelper.instance.obtenirToutesLesFiches().then((data) {
-        _allFiches = data;
-        _filteredFiches = data;
-        return data;
-      });
-    });
+  Future<void> _navigateToFormForEdit(int id) async {
+    final result = await context.push('/form/edit/$id');
+    if (result == true && mounted) {
+      _refreshList(); 
+    }
   }
 
-  // Nouvelle méthode d'export utilisant la fonction utilitaire corrigée
-  // Nouvelle méthode d'export utilisant la fonction utilitaire corrigée
+  Future<void> _deleteRecord(int id, String ficheNo) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        surfaceTintColor: Colors.transparent,
+        title: const Text('Confirmer la Suppression'),
+        content: Text('Voulez-vous vraiment supprimer la fiche N°$ficheNo ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await DatabaseHelper.instance.supprimerFiche(id);
+      _refreshList();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fiche N°$ficheNo supprimée.')),
+        );
+      }
+    }
+  }
+
   Future<void> _exportData() async {
-    // Les permissions de stockage ne sont plus requises grâce au FilePicker moderne,
-    // on peut directement lancer l'exportation sécurisée.
     setState(() => _isExporting = true);
-
     try {
       await exporterEtEventuellementVider(
         context,
         demanderVidage: true,
-        onRefresh: () => _refreshList(), // Rafraîchit la liste automatiquement si la base est vidée
+        onRefresh: () => _refreshList(), 
       );
     } catch (e) {
       if (mounted) {
@@ -80,381 +113,141 @@ class _RecordListScreenState extends State<RecordListScreen> {
     }
   }
 
+  void _onFilterChanged(String? newFilter) {
+    setState(() {
+      _filter = newFilter == 'Tous' ? null : newFilter;
+    });
+    _applyFilter();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final double screenWidth = MediaQuery.of(context).size.width;
-    final double hPad = screenWidth > 600 ? 32.0 : 16.0;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        shadowColor: Colors.black12,
-        surfaceTintColor: Colors.transparent,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(color: Colors.grey.shade200, height: 1),
-        ),
-        leading: Padding(
-          padding: const EdgeInsets.all(10.0),
-          child: Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1F2C),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.shield_outlined, color: Colors.white, size: 18),
-          ),
-        ),
-        title: const Text(
-          'Enregistrements',
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
-        ),
+        title: const Text('Fiches Remplies'),
         actions: [
-          // Bouton d'exportation Excel mis à jour
-          IconButton(
-            icon: _isExporting
-                ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-                : const Icon(Icons.upload_file_outlined),
-            onPressed: _isExporting ? null : _exportData,
-            tooltip: 'Exporter en Excel et vider la base',
+          if (!_isLoading)
+            _isExporting
+                ? Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3, 
+                        color: Theme.of(context).appBarTheme.iconTheme?.color ?? (isDarkMode ? Colors.white : Colors.black),
+                      ),
+                    ),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.download_outlined),
+                    onPressed: _exportData,
+                    tooltip: 'Exporter les données (Excel)',
+                  ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                _buildFilterBar(),
+                Expanded(
+                  child: _filteredRecords.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.inbox_outlined, size: 60, color: Colors.grey),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'Aucune fiche à afficher.',
+                                style: TextStyle(fontSize: 16, color: Colors.grey),
+                              ),
+                              if (_filter != null)
+                                Text(
+                                  'Filtre actif : $_filter',
+                                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                                ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: _filteredRecords.length,
+                          itemBuilder: (context, index) {
+                            final record = _filteredRecords[index];
+                            final ficheNo = record[DBConstantes.colFicheNumero] ?? 'N/A';
+                            final dateSaisie = record[DBConstantes.colDateSaisie] ?? 'Date inconnue';
+                            final statut = record[DBConstantes.colStatutSerologique] ?? 'Non défini';
+
+                            return Card(
+                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: getStatutColor(statut).withOpacity(0.15),
+                                  child: Icon(getStatutIcon(statut), color: getStatutColor(statut)),
+                                ),
+                                title: Text('Fiche N° $ficheNo', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                subtitle: Text('Date: $dateSaisie'),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Chip(
+                                      label: Text(statut, style: const TextStyle(fontSize: 12)),
+                                      backgroundColor: getStatutColor(statut).withOpacity(0.1),
+                                      side: BorderSide.none,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    IconButton(
+                                      icon: const Icon(Icons.edit_outlined, color: Colors.blueGrey),
+                                      onPressed: () => _navigateToFormForEdit(record[DBConstantes.colId]),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                      onPressed: () => _deleteRecord(record[DBConstantes.colId], ficheNo),
+                                    ),
+                                  ],
+                                ),
+                                onTap: () => _navigateToFormForEdit(record[DBConstantes.colId]),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.go('/form/new'),
+        icon: const Icon(Icons.add),
+        label: const Text('Nouvelle Fiche'),
+      ),
+    );
+  }
+
+  Widget _buildFilterBar() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: isDarkMode ? Colors.grey[850] : Colors.grey.shade100,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('Filtrer par statut:', style: TextStyle(fontWeight: FontWeight.w500)),
+          DropdownButton<String>(
+            value: _filter ?? 'Tous',
+            underline: const SizedBox.shrink(),
+            dropdownColor: isDarkMode ? Colors.grey[900] : Colors.white,
+            items: ['Tous', 'Réactif', 'Non réactif', 'Non défini']
+                .map((label) => DropdownMenuItem(value: label, child: Text(label)))
+                .toList(),
+            onChanged: _onFilterChanged,
           ),
         ],
       ),
-      body: SafeArea(
-        child: FutureBuilder<List<Map<String, dynamic>>>(
-          future: _recordsFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(color: Color(0xFF22C55E)),
-              );
-            }
-            if (snapshot.hasError) {
-              return Center(child: Text('Erreur : ${snapshot.error}'));
-            }
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Barre de recherche
-                Padding(
-                  padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: TextField(
-                            controller: _searchController,
-                            style: const TextStyle(fontSize: 14),
-                            decoration: const InputDecoration(
-                              hintText: 'Rechercher par Fiche N° ou date',
-                              hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
-                              prefixIcon: Icon(Icons.search, color: Colors.grey, size: 20),
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(vertical: 14),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        height: 48,
-                        width: 48,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: Icon(Icons.tune, color: Colors.grey.shade600),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // En-tête
-                Padding(
-                  padding: EdgeInsets.fromLTRB(hPad, 20, hPad, 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${_filteredFiches.length} DOSSIERS RÉCENTS',
-                        style: const TextStyle(
-                          color: Color(0xFF5A6A85),
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.8,
-                          fontSize: 12,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () {},
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: const Text(
-                          'Tout voir',
-                          style: TextStyle(color: Color(0xFF22C55E), fontSize: 13),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Liste
-                Expanded(
-                  child: _filteredFiches.isEmpty
-                      ? const Center(
-                    child: Text(
-                      'Aucun enregistrement trouvé.',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  )
-                      : ListView.separated(
-                    padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 12),
-                    itemCount: _filteredFiches.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final fiche = _filteredFiches[index];
-                      final id = fiche[DBConstantes.colId] ?? 0;
-                      final numeroFiche = fiche[DBConstantes.colFicheNumero] ?? 'Inconnu';
-                      final dateSaisie = fiche[DBConstantes.colDateSaisie] ?? '--/--/----';
-                      final sexe = fiche[DBConstantes.colSexe] ?? 'N/A';
-                      final age = fiche[DBConstantes.colAgeTranche] ?? 'N/A';
-
-                      return _FicheCard(
-                        id: id,
-                        numeroFiche: numeroFiche,
-                        dateSaisie: dateSaisie,
-                        sexe: sexe,
-                        age: age,
-                        onTap: () async {
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => RecordDetailScreen(ficheId: id),
-                            ),
-                          );
-                          if (result == true) _refreshList();
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const SurveyFormScreen()),
-          ).then((_) => _refreshList());
-        },
-        backgroundColor: const Color(0xFF38BDF8),
-        elevation: 4,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add, color: Colors.white, size: 28),
-      ),
-    );
-  }
-}
-
-// ── Widget carte fiche (inchangé) ──────────────────────────────────────────
-class _FicheCard extends StatelessWidget {
-  final int id;
-  final String numeroFiche;
-  final String dateSaisie;
-  final String sexe;
-  final String age;
-  final VoidCallback onTap;
-
-  const _FicheCard({
-    required this.id,
-    required this.numeroFiche,
-    required this.dateSaisie,
-    required this.sexe,
-    required this.age,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // AJOUT DE EXPANDED : Empêche le numéro de fiche long de faire déborder le composant
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'FICHE N°',
-                          style: TextStyle(
-                            color: Color(0xFF22D3EE),
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          numeroFiche,
-                          // Sécurité anti-overflow : réduit la police ou tronque si le nom est extrêmement long
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16, // Légère réduction à 16 pour une meilleure tolérance responsive
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12), // Espace de sécurité entre le numéro et la date
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        dateSaisie,
-                        style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-                      ),
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Text(
-                          'Complété',
-                          style: TextStyle(
-                            color: Color(0xFF64748B),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12.0),
-                child: Divider(height: 1, color: Colors.grey.shade200),
-              ),
-              Row(
-                children: [
-                Expanded(
-  child: _InfoCell(
-    label: 'ÂGE', 
-    value: '$age ans',
-    valueColor: Colors.black, // <-- Ajoute la couleur de ton choix ici
-  ),
-),
-const SizedBox(width: 8),
-Expanded(
-  child: _InfoCell(
-    label: 'SEXE', 
-    value: sexe,
-    valueColor: Colors.blue, // <-- Ou une autre couleur ici
-  ),
-),const SizedBox(width: 8),
-                  // Nettoyage des SizedBox inutiles pour garder une structure propre
-                  const Row(
-                    children: [
-                      Text(
-                        'Voir',
-                        style: TextStyle(
-                          color: Color(0xFF22D3EE),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                      Icon(Icons.chevron_right, color: Color(0xFF22D3EE), size: 18),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _InfoCell extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color valueColor;
-
-  const _InfoCell({
-    required this.label,
-    required this.value,
-    required this.valueColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.grey,
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.4,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-            color: valueColor,
-          ),
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
     );
   }
 }

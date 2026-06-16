@@ -8,18 +8,23 @@ import 'package:uuid/uuid.dart';
 import '../../Dadabase/database_helper.dart';
 
 // ────────────────────────────────────────────────────────────────────
-//  Couleurs et design tokens
+//  Couleurs et design tokens adaptatifs
 // ────────────────────────────────────────────────────────────────────
 class AppColors {
   static const cyan = Color(0xFF00BCD4);
   static const cyanLight = Color(0xFFE0F7FA);
   static const cyanDark = Color(0xFF0097A7);
-  static const textPrimary = Color(0xFF111827);
-  static const textSecondary = Color(0xFF6B7280);
-  static const textHint = Color(0xFF9CA3AF);
-  static const border = Color(0xFFE5E7EB);
-  static const sectionBg = Color(0xFFF8FAFB);
-  static const white = Colors.white;
+  
+  // Couleurs de secours si le thème ne suffit pas
+  static const textPrimaryLight = Color(0xFF111827);
+  static const textSecondaryLight = Color(0xFF6B7280);
+  
+  // Remplacements pour les fonds de cartes adaptatifs
+  static Color getCardColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+        ? Colors.grey[900]! 
+        : Colors.white;
+  }
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -38,7 +43,6 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
 
-  // State-managed controllers for all text fields
   final _sexeAutreController = TextEditingController();
   final _statutMatrimonialAutreController = TextEditingController();
   final _residenceAutreController = TextEditingController();
@@ -50,7 +54,6 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
   final Map<String, dynamic> _surveyData = {
     "date_remplissage": DateTime.now().toIso8601String(),
     "fiche_no": "",
-    // I- Identité
     "age": null,
     "sexe": null,
     "statut_matrimonial": null,
@@ -58,7 +61,6 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
     "residence": null,
     "religion": null,
     "source_principale_revenu": null,
-    // II- Connaissances
     "entendu_parler_vih": null,
     "transmission": {
       "Rapports sexuels non protégés": null,
@@ -69,7 +71,6 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
     },
     "prevention": <String>[],
     "personne_saine_porteuse": null,
-    // III- Pratiques
     "deja_rapport_sexuel": null,
     "age_premier_rapport": null,
     "nombre_partenaires_12_mois": null,
@@ -78,14 +79,12 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
     "tatouage_scarification_piercing_12_mois": null,
     "depistage_3_mois": null,
     "connait_etat_serologique_partenaire": null,
-    // IV- Attitudes
     "pret_test_depistage": null,
     "partager_toilettes": null,
     "ami_avec_pvvih": null,
     "travailler_etudier_avec_pvvih": null,
     "rejetee_par_societe": null,
     "depistage_important": null,
-    // V- Status sérologique
     "statut_serologique": null,
   };
 
@@ -102,7 +101,6 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
 
   @override
   void dispose() {
-    // Dispose all text controllers to avoid memory leaks
     _sexeAutreController.dispose();
     _statutMatrimonialAutreController.dispose();
     _residenceAutreController.dispose();
@@ -130,7 +128,6 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
     final uiData = _reverseMapData(dbData);
     _surveyData.addAll(uiData);
     
-    // Update controllers with the loaded data
     _sexeAutreController.text = uiData['sexe_autre'] ?? '';
     _statutMatrimonialAutreController.text = uiData['statut_matrimonial_autre'] ?? '';
     _residenceAutreController.text = uiData['residence_autre'] ?? '';
@@ -158,7 +155,6 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
       }
     }
 
-    // Identité
     uiData['fiche_no'] = dbData[DBConstantes.colFicheNumero];
     uiData['date_remplissage'] = dbData[DBConstantes.colDateSaisie];
     uiData['age'] = dbData[DBConstantes.colAgeTranche];
@@ -169,7 +165,6 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
     extractValueAndOther('religion', 'religion_autre', ['Chrétienne', 'Musulmane', 'Traditionnelle', 'Sans religion'], dbData[DBConstantes.colReligion]);
     extractValueAndOther('source_principale_revenu', 'source_principale_revenu_autre', ['Parents / famille', 'Travail personnel', 'Bourse'], dbData[DBConstantes.colSourceRevenu]);
 
-    // Connaissances
     uiData['entendu_parler_vih'] = dbData[DBConstantes.colEntenduParlerVih];
     uiData['transmission'] = {
       "Rapports sexuels non protégés": dbData[DBConstantes.colTransRapportsSexuels],
@@ -188,7 +183,6 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
     uiData['prevention'] = prevention;
     uiData['personne_saine_porteuse'] = dbData[DBConstantes.colPersonneSainePorteuse];
 
-    // Pratiques
     uiData['deja_rapport_sexuel'] = dbData[DBConstantes.colDejaRapportSexuel];
     uiData['age_premier_rapport'] = dbData[DBConstantes.colAgePremierRapport];
     uiData['nombre_partenaires_12_mois'] = dbData[DBConstantes.colNombrePartenaires12Mois];
@@ -209,7 +203,6 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
     uiData['depistage_3_mois'] = dbData[DBConstantes.colDepistage3Mois];
     uiData['connait_etat_serologique_partenaire'] = dbData[DBConstantes.colConnaitStatutPartenaire];
     
-    // Attitudes
     uiData['pret_test_depistage'] = dbData[DBConstantes.colPretTestDepistage];
     uiData['partager_toilettes'] = dbData[DBConstantes.colPartagerToilettes];
     uiData['ami_avec_pvvih'] = dbData[DBConstantes.colAmiAvecPvvih];
@@ -217,7 +210,6 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
     uiData['rejetee_par_societe'] = dbData[DBConstantes.colRejetaParSociete];
     uiData['depistage_important'] = dbData[DBConstantes.colDepistageImportant];
     
-    // Statut
     uiData['statut_serologique'] = dbData[DBConstantes.colStatutSerologique];
 
     return uiData;
@@ -282,35 +274,28 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
       final record = _buildDBRecord();
       if (_isEditMode) {
         await DatabaseHelper.instance.modifierFiche(widget.ficheId!, record);
-        debugPrint("✅ Fiche modifiée ID: ${widget.ficheId!}");
       } else {
-        final int newId = await DatabaseHelper.instance.insererFiche(record);
-        debugPrint("✅ Fiche enregistrée ID: $newId");
+        await DatabaseHelper.instance.insererFiche(record);
       }
-      
       if (!mounted) return;
       _showSuccessDialog();
-
     } catch (e) {
-      debugPrint("❌ Erreur: $e");
       if (!mounted) return;
       _showErrorDialog(e.toString());
-    } finally {
+    } finally { // <--- Corrigé ici (avec deux 'l')
       if (mounted) setState(() => _isSaving = false);
     }
   }
-
   void _showSuccessDialog() {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.white,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(children: [
-          Icon(Icons.check_circle, color: AppColors.cyan, size: 28),
-          SizedBox(width: 10),
+          const Icon(Icons.check_circle, color: AppColors.cyan, size: 28),
+          const SizedBox(width: 10),
           Text(_isEditMode ? "Enquête Modifiée" : "Enquête Sauvegardée"),
         ]),
         content: Text(_isEditMode
@@ -320,8 +305,8 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
           if (_isEditMode)
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Close dialog
-                Navigator.of(context).pop(true); // Pop form screen, return true
+                Navigator.of(context).pop();
+                Navigator.of(context).pop(true);
               },
               child: const Text("Retour au Détail", style: TextStyle(color: AppColors.cyan, fontWeight: FontWeight.bold)),
             )
@@ -353,12 +338,11 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.white,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(children: [
           Icon(Icons.error_outline, color: Colors.red, size: 28),
-          SizedBox(width: 10),
+          const SizedBox(width: 10),
           Text("Erreur"),
         ]),
         content: Text("Impossible d'enregistrer la fiche.\n\nDétails: $message"),
@@ -374,15 +358,21 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Suppression du fond blanc forcé pour laisser le ThemeProvider gérer l'arrière-plan
     return Scaffold(
-      backgroundColor: AppColors.white,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(_isEditMode ? "Modifier l'Enquête" : "Questionnaire", style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+            Text(
+              _isEditMode ? "Modifier l'Enquête" : "Questionnaire", 
+              style: const TextStyle(fontWeight: FontWeight.bold)
+            ),
             const SizedBox(height: 4),
-            Text("Fiche N°: ${_surveyData['fiche_no']}", style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+            Text(
+              "Fiche N°: ${_surveyData['fiche_no']}", 
+              style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor)
+            ),
           ],
         ),
         leading: IconButton(
@@ -439,7 +429,7 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
                    _buildRadioGroup("15- Accepteriez-vous d’être ami(e) avec une personne vivant avec le VIH ?", ["Oui", "Non"], "ami_avec_pvvih"),
                    _buildRadioGroup("16- Accepteriez-vous de travailler ou d’étudier avec une personne vivant avec le VIH/SIDA ?", ["Oui", "Non"], "travailler_etudier_avec_pvvih"),
                    _buildRadioGroup("17- Une personne vivant avec le VIH doit-elle être rejetée par la société ?", ["Oui", "Non"], "rejetee_par_societe"),
-                   _buildRadioGroup("18- Pensez-vous que le dépistage du VIH est important ?", ["Oui", "Non", "Ne sait pas"], "depistage_important"),
+                   _buildRadioGroup("18- Pensez-vous que le dépistage du VIH is important ?", ["Oui", "Non", "Ne sait pas"], "depistage_important"),
 
                    _buildSectionTitle("V- Status sérologique"),
                    _buildRadioGroup("Réactif/Non réactif", ["Réactif", "Non réactif"], "statut_serologique"),
@@ -458,7 +448,7 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
           ),
           child: _isSaving
               ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
-              : Text(_isEditMode ? "Mettre à Jour la Fiche" : "Enregistrer la Fiche", style: TextStyle(fontWeight: FontWeight.bold)),
+              : Text(_isEditMode ? "Mettre à Jour la Fiche" : "Enregistrer la Fiche", style: const TextStyle(fontWeight: FontWeight.bold)),
         ),
       ),
     );
@@ -473,6 +463,7 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
 
   Widget _buildTextField(String label, TextEditingController controller, {bool isNumeric = false}) {
     return Card(
+      color: AppColors.getCardColor(context),
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
         padding: const EdgeInsets.all(12.0),
@@ -498,6 +489,7 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
 
   Widget _buildRadioGroup(String title, List<String> options, String dataKey) {
     return Card(
+      color: AppColors.getCardColor(context),
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
         padding: const EdgeInsets.all(12.0),
@@ -523,6 +515,7 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
 
   Widget _buildTransmissionRadioGroup(String mode) {
     return Card(
+      color: AppColors.getCardColor(context),
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
         padding: const EdgeInsets.all(12.0),
@@ -536,7 +529,9 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
                   groupValue: _surveyData['transmission'][mode],
                   onChanged: (String? value) {
                     setState(() {
-                      _surveyData['transmission'][mode] = value;
+                      final newTransmission = Map<String, String?>.from(_surveyData['transmission']);
+                      newTransmission[mode] = value;
+                       _surveyData['transmission'] = newTransmission;
                     });
                   },
                 )),
@@ -550,6 +545,7 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
     List<String> allOptions = [...options, 'Autre'];
     
     return Card(
+      color: AppColors.getCardColor(context),
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
         padding: const EdgeInsets.all(12.0),
@@ -586,6 +582,7 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
 
   Widget _buildCheckboxGroup(String title, List<String> options, String dataKey) {
     return Card(
+      color: AppColors.getCardColor(context),
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
         padding: const EdgeInsets.all(12.0),
@@ -618,6 +615,7 @@ class _SurveyFormScreenState extends State<SurveyFormScreen> {
     List<String> allOptions = [...options, 'Autres à préciser'];
     
     return Card(
+      color: AppColors.getCardColor(context),
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
         padding: const EdgeInsets.all(12.0),
